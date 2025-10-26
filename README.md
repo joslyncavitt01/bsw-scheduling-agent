@@ -221,3 +221,4 @@ This demo incorporates production-ready patterns:
 **Date**: October 2025  
 **Tech Stack**: Python 3.11 | Streamlit | OpenAI GPT-4o-mini | ChromaDB
 
+

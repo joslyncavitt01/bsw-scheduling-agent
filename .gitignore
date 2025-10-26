@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+.streamlit/
+venv/
+*.log
+.DS_Store
+.vscode/
+*.db
+chromadb/

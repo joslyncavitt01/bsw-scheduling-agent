@@ -1,0 +1,116 @@
+{
+  "summary": {
+    "total_scenarios": 4,
+    "passed": 0,
+    "failed": 4,
+    "success_rate": 0.0,
+    "timestamp": "2025-10-26T14:12:09.581356"
+  },
+  "conversation_metrics": {
+    "average_score": 0.678,
+    "min_score": 0.63,
+    "max_score": 0.727,
+    "score_distribution": [
+      0.7,
+      0.655,
+      0.727,
+      0.63
+    ]
+  },
+  "tool_metrics": {
+    "total_calls": 11,
+    "unique_tools": 4,
+    "tool_frequency": {
+      "check_provider_availability": 4,
+      "search_appointment_slots": 4,
+      "verify_insurance": 2,
+      "check_referral_status": 1
+    },
+    "most_used": "check_provider_availability",
+    "least_used": "check_referral_status",
+    "tool_sequence": [
+      "check_provider_availability",
+      "search_appointment_slots",
+      "verify_insurance",
+      "check_referral_status",
+      "check_provider_availability",
+      "search_appointment_slots",
+      "check_provider_availability",
+      "search_appointment_slots",
+      "verify_insurance",
+      "check_provider_availability",
+      "search_appointment_slots"
+    ]
+  },
+  "latency_metrics": {
+    "avg_duration": 0.5,
+    "min_duration": 0.5,
+    "max_duration": 0.5,
+    "total_duration": 2.01
+  },
+  "token_metrics": {
+    "total_tokens": 292,
+    "avg_tokens_per_scenario": 73.1,
+    "estimated_cost": 0.0
+  },
+  "agent_performance": {
+    "Primary Care Agent": {
+      "agent_name": "Primary Care Agent",
+      "total_invocations": 2,
+      "success_rate": 0.0,
+      "avg_conversation_score": 0.678,
+      "avg_response_time": 0.5,
+      "total_tokens_used": 145,
+      "tools_called": {
+        "check_provider_availability": 2,
+        "search_appointment_slots": 2,
+        "verify_insurance": 1
+      },
+      "common_errors": []
+    },
+    "Cardiology Agent": {
+      "agent_name": "Cardiology Agent",
+      "total_invocations": 1,
+      "success_rate": 0.0,
+      "avg_conversation_score": 0.655,
+      "avg_response_time": 0.5,
+      "total_tokens_used": 81,
+      "tools_called": {
+        "verify_insurance": 1,
+        "check_referral_status": 1,
+        "check_provider_availability": 1,
+        "search_appointment_slots": 1
+      },
+      "common_errors": []
+    },
+    "Orthopedic Agent": {
+      "agent_name": "Orthopedic Agent",
+      "total_invocations": 1,
+      "success_rate": 0.0,
+      "avg_conversation_score": 0.7,
+      "avg_response_time": 0.5,
+      "total_tokens_used": 65,
+      "tools_called": {
+        "check_provider_availability": 1,
+        "search_appointment_slots": 1
+      },
+      "common_errors": []
+    }
+  },
+  "success_metrics": {
+    "criteria_met_counts": {
+      "correct_specialty_identified": 1,
+      "tools_used_correctly": 4,
+      "conversation_natural": 4,
+      "insurance_verified": 2,
+      "referral_checked": 1
+    },
+    "criteria_success_rates": {
+      "correct_specialty_identified": 0.25,
+      "tools_used_correctly": 1.0,
+      "conversation_natural": 1.0,
+      "insurance_verified": 0.5,
+      "referral_checked": 0.25
+    }
+  }
+}

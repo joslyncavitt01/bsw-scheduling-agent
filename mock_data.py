@@ -792,3 +792,4 @@ if __name__ == "__main__":
     print(f"  - Available: {sum(1 for s in ALL_APPOINTMENT_SLOTS if s.is_available)}")
     print(f"  - Booked: {sum(1 for s in ALL_APPOINTMENT_SLOTS if not s.is_available)}")
 
+

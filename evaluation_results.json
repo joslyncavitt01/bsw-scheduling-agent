@@ -1,0 +1,276 @@
+{
+  "timestamp": "2025-10-26T14:12:09.579382",
+  "total_scenarios": 4,
+  "passed": 0,
+  "failed": 4,
+  "results": [
+    {
+      "scenario_id": "SC001",
+      "scenario_name": "Orthopedic Post-Op Follow-up",
+      "patient_id": "PT001",
+      "start_time": 1761505927.567084,
+      "end_time": 1761505928.068172,
+      "duration_seconds": 0.5010879039764404,
+      "conversation_history": [
+        {
+          "role": "user",
+          "content": "Hi, I had knee replacement surgery two weeks ago and need to schedule my follow-up appointment with Dr. Martinez.",
+          "timestamp": 1761505927.567085
+        },
+        {
+          "role": "assistant",
+          "content": "I'd be happy to help schedule your orthopedic follow-up. Let me check Dr. Martinez's availability for you. I have appointments available this Thursday at 10:00 AM. Would that work for you?",
+          "agent": "Orthopedic Agent",
+          "tools_used": [
+            "check_provider_availability",
+            "search_appointment_slots"
+          ],
+          "timestamp": 1761505928.068165
+        }
+      ],
+      "tools_called": [
+        "check_provider_availability",
+        "search_appointment_slots"
+      ],
+      "agents_used": [
+        "Orthopedic Agent"
+      ],
+      "success_achieved": false,
+      "success_criteria_met": {
+        "appointment_booked": false,
+        "correct_specialty_identified": true,
+        "insurance_verified": false,
+        "referral_checked": false,
+        "provider_matched_preferences": false,
+        "appropriate_urgency": false,
+        "tools_used_correctly": true,
+        "conversation_natural": true
+      },
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "conversation_score": 0.7,
+        "tool_usage": {
+          "total_calls": 2,
+          "unique_tools": 2,
+          "tool_frequency": {
+            "check_provider_availability": 1,
+            "search_appointment_slots": 1
+          },
+          "most_used": "check_provider_availability",
+          "least_used": "search_appointment_slots",
+          "tool_sequence": [
+            "check_provider_availability",
+            "search_appointment_slots"
+          ]
+        },
+        "conversation_turns": 2,
+        "total_tokens_estimate": 65.0
+      }
+    },
+    {
+      "scenario_id": "SC002",
+      "scenario_name": "Cardiology New Patient with Urgent Symptoms",
+      "patient_id": "PT002",
+      "start_time": 1761505928.0689752,
+      "end_time": 1761505928.570857,
+      "duration_seconds": 0.5018818378448486,
+      "conversation_history": [
+        {
+          "role": "user",
+          "content": "Hello, I've been having some chest pain and my doctor referred me to see a cardiologist. I'm on Medicare. Can you help me schedule an appointment?",
+          "timestamp": 1761505928.0689762
+        },
+        {
+          "role": "assistant",
+          "content": "I understand you're experiencing chest pain and need to see a cardiologist. I've verified your Medicare coverage and referral. Given the urgency, I can schedule you for tomorrow at 2:00 PM with Dr. Patel. Is that acceptable?",
+          "agent": "Cardiology Agent",
+          "tools_used": [
+            "verify_insurance",
+            "check_referral_status",
+            "check_provider_availability",
+            "search_appointment_slots"
+          ],
+          "timestamp": 1761505928.570771
+        }
+      ],
+      "tools_called": [
+        "verify_insurance",
+        "check_referral_status",
+        "check_provider_availability",
+        "search_appointment_slots"
+      ],
+      "agents_used": [
+        "Cardiology Agent"
+      ],
+      "success_achieved": false,
+      "success_criteria_met": {
+        "appointment_booked": false,
+        "correct_specialty_identified": false,
+        "insurance_verified": true,
+        "referral_checked": true,
+        "provider_matched_preferences": false,
+        "appropriate_urgency": false,
+        "tools_used_correctly": true,
+        "conversation_natural": true
+      },
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "conversation_score": 0.655,
+        "tool_usage": {
+          "total_calls": 4,
+          "unique_tools": 4,
+          "tool_frequency": {
+            "verify_insurance": 1,
+            "check_referral_status": 1,
+            "check_provider_availability": 1,
+            "search_appointment_slots": 1
+          },
+          "most_used": "verify_insurance",
+          "least_used": "search_appointment_slots",
+          "tool_sequence": [
+            "verify_insurance",
+            "check_referral_status",
+            "check_provider_availability",
+            "search_appointment_slots"
+          ]
+        },
+        "conversation_turns": 2,
+        "total_tokens_estimate": 81.9
+      }
+    },
+    {
+      "scenario_id": "SC003",
+      "scenario_name": "Complex Rescheduling with Provider Preference",
+      "patient_id": "PT003",
+      "start_time": 1761505928.57151,
+      "end_time": 1761505929.0738719,
+      "duration_seconds": 0.5023617744445801,
+      "conversation_history": [
+        {
+          "role": "user",
+          "content": "I have an appointment scheduled for next Tuesday but I have a work conflict. Can I reschedule to a different day? I'd prefer to stay with Dr. Nguyen if possible.",
+          "timestamp": 1761505928.571511
+        },
+        {
+          "role": "assistant",
+          "content": "I can help you reschedule your appointment with Dr. Nguyen. To avoid Tuesday, I have Wednesday at 3:00 PM or Thursday at 9:00 AM available. Which would you prefer?",
+          "agent": "Primary Care Agent",
+          "tools_used": [
+            "check_provider_availability",
+            "search_appointment_slots"
+          ],
+          "timestamp": 1761505929.073865
+        }
+      ],
+      "tools_called": [
+        "check_provider_availability",
+        "search_appointment_slots"
+      ],
+      "agents_used": [
+        "Primary Care Agent"
+      ],
+      "success_achieved": false,
+      "success_criteria_met": {
+        "appointment_booked": false,
+        "correct_specialty_identified": false,
+        "insurance_verified": false,
+        "referral_checked": false,
+        "provider_matched_preferences": false,
+        "appropriate_urgency": false,
+        "tools_used_correctly": true,
+        "conversation_natural": true
+      },
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "conversation_score": 0.727,
+        "tool_usage": {
+          "total_calls": 2,
+          "unique_tools": 2,
+          "tool_frequency": {
+            "check_provider_availability": 1,
+            "search_appointment_slots": 1
+          },
+          "most_used": "check_provider_availability",
+          "least_used": "search_appointment_slots",
+          "tool_sequence": [
+            "check_provider_availability",
+            "search_appointment_slots"
+          ]
+        },
+        "conversation_turns": 2,
+        "total_tokens_estimate": 76.7
+      }
+    },
+    {
+      "scenario_id": "SC004",
+      "scenario_name": "Primary Care Annual Physical",
+      "patient_id": "PT004",
+      "start_time": 1761505929.074532,
+      "end_time": 1761505929.576998,
+      "duration_seconds": 0.5024659633636475,
+      "conversation_history": [
+        {
+          "role": "user",
+          "content": "I'd like to schedule my annual physical. I have United Healthcare insurance. What times are available?",
+          "timestamp": 1761505929.0745332
+        },
+        {
+          "role": "assistant",
+          "content": "I'd be happy to help schedule your annual physical. Your United Healthcare plan covers preventive care at 100%. Dr. White has availability next Monday at 8:30 AM or Friday at 1:00 PM. Which works better for you?",
+          "agent": "Primary Care Agent",
+          "tools_used": [
+            "verify_insurance",
+            "check_provider_availability",
+            "search_appointment_slots"
+          ],
+          "timestamp": 1761505929.576992
+        }
+      ],
+      "tools_called": [
+        "verify_insurance",
+        "check_provider_availability",
+        "search_appointment_slots"
+      ],
+      "agents_used": [
+        "Primary Care Agent"
+      ],
+      "success_achieved": false,
+      "success_criteria_met": {
+        "appointment_booked": false,
+        "correct_specialty_identified": false,
+        "insurance_verified": true,
+        "referral_checked": false,
+        "provider_matched_preferences": false,
+        "appropriate_urgency": false,
+        "tools_used_correctly": true,
+        "conversation_natural": true
+      },
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "conversation_score": 0.63,
+        "tool_usage": {
+          "total_calls": 3,
+          "unique_tools": 3,
+          "tool_frequency": {
+            "verify_insurance": 1,
+            "check_provider_availability": 1,
+            "search_appointment_slots": 1
+          },
+          "most_used": "verify_insurance",
+          "least_used": "search_appointment_slots",
+          "tool_sequence": [
+            "verify_insurance",
+            "check_provider_availability",
+            "search_appointment_slots"
+          ]
+        },
+        "conversation_turns": 2,
+        "total_tokens_estimate": 68.9
+      }
+    }
+  ]
+}
