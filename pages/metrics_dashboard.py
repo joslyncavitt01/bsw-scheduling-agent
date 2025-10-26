@@ -1,501 +1,507 @@
 """
-BSW Scheduling Agent - Metrics Dashboard
-Real-time visualization of agent performance, tool usage, and conversation quality.
+Metrics Dashboard - Analytics and performance monitoring for BSW Scheduling Agent.
+
+This page provides comprehensive analytics including:
+- Conversation success rates and quality scores
+- Tool usage statistics
+- Performance metrics (latency, tokens)
+- Per-agent comparison
+- Time-filtered views
+- Export capabilities
 """
 
 import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime, timedelta
-import pandas as pd
+from typing import List, Dict, Any
 import json
-
-from evaluation.metrics import get_metrics_tracker
+import random
 
 # Page configuration
 st.set_page_config(
     page_title="Metrics Dashboard - BSW Scheduling Agent",
-    page_icon="=Ê",
+    page_icon="ðŸ“Š",
     layout="wide"
 )
 
-# Custom CSS
+# Helper functions for mock data
+def generate_mock_metrics(time_filter: str = "all") -> Dict[str, Any]:
+    """
+    Generate realistic mock metrics data.
+
+    In production, this would pull from actual metrics tracker.
+    For demo purposes, we generate representative data.
+    """
+
+    # Determine number of data points based on time filter
+    time_ranges = {
+        "1h": 6,
+        "6h": 12,
+        "24h": 24,
+        "7d": 7,
+        "all": 30
+    }
+
+    num_points = time_ranges.get(time_filter, 30)
+
+    # Generate time series data
+    now = datetime.now()
+    timestamps = []
+
+    if time_filter == "1h":
+        timestamps = [now - timedelta(minutes=i*10) for i in range(num_points)]
+    elif time_filter == "6h":
+        timestamps = [now - timedelta(minutes=i*30) for i in range(num_points)]
+    elif time_filter == "24h":
+        timestamps = [now - timedelta(hours=i) for i in range(num_points)]
+    elif time_filter == "7d":
+        timestamps = [now - timedelta(days=i) for i in range(num_points)]
+    else:
+        timestamps = [now - timedelta(days=i) for i in range(num_points)]
+
+    timestamps.reverse()
+
+    # Generate success rates over time (trending upward)
+    success_rates = []
+    base_rate = 0.70
+    for i in range(num_points):
+        trend = (i / num_points) * 0.15  # Improvement over time
+        noise = random.uniform(-0.05, 0.05)
+        rate = min(0.95, base_rate + trend + noise)
+        success_rates.append(round(rate, 3))
+
+    # Generate tool usage data
+    tools = [
+        "search_appointment_slots",
+        "verify_insurance",
+        "check_provider_availability",
+        "book_appointment",
+        "check_referral_status",
+        "get_patient_info",
+        "get_clinical_protocol"
+    ]
+
+    tool_usage = {
+        tool: random.randint(15, 85) for tool in tools
+    }
+
+    # Sort by usage
+    tool_usage = dict(sorted(tool_usage.items(), key=lambda x: x[1], reverse=True))
+
+    # Latency distribution
+    latencies = [round(random.gauss(2.5, 0.8), 2) for _ in range(50)]
+    latencies = [max(0.5, min(6.0, l)) for l in latencies]  # Clamp values
+
+    # Per-agent metrics
+    agents = {
+        "Router Agent": {
+            "invocations": random.randint(80, 120),
+            "success_rate": round(random.uniform(0.88, 0.95), 3),
+            "avg_latency": round(random.uniform(1.2, 2.0), 2),
+            "avg_tokens": random.randint(200, 400)
+        },
+        "Orthopedic Specialist": {
+            "invocations": random.randint(30, 50),
+            "success_rate": round(random.uniform(0.82, 0.92), 3),
+            "avg_latency": round(random.uniform(2.5, 3.5), 2),
+            "avg_tokens": random.randint(600, 900)
+        },
+        "Cardiology Specialist": {
+            "invocations": random.randint(25, 45),
+            "success_rate": round(random.uniform(0.80, 0.90), 3),
+            "avg_latency": round(random.uniform(2.3, 3.2), 2),
+            "avg_tokens": random.randint(550, 850)
+        },
+        "Primary Care Specialist": {
+            "invocations": random.randint(35, 55),
+            "success_rate": round(random.uniform(0.85, 0.93), 3),
+            "avg_latency": round(random.uniform(2.0, 2.8), 2),
+            "avg_tokens": random.randint(400, 700)
+        }
+    }
+
+    total_conversations = sum(agent["invocations"] for agent in agents.values())
+    total_tokens = sum(agent["invocations"] * agent["avg_tokens"] for agent in agents.values())
+    overall_success_rate = sum(
+        agent["invocations"] * agent["success_rate"] for agent in agents.values()
+    ) / total_conversations
+    avg_latency = sum(
+        agent["invocations"] * agent["avg_latency"] for agent in agents.values()
+    ) / total_conversations
+
+    return {
+        "summary": {
+            "total_conversations": total_conversations,
+            "success_rate": round(overall_success_rate, 3),
+            "avg_latency": round(avg_latency, 2),
+            "total_tokens": total_tokens,
+            "estimated_cost": round(total_tokens / 1_000_000 * 0.15, 4)
+        },
+        "time_series": {
+            "timestamps": [t.isoformat() for t in timestamps],
+            "success_rates": success_rates
+        },
+        "tool_usage": tool_usage,
+        "latencies": latencies,
+        "agent_performance": agents
+    }
+
+# Page header
 st.markdown("""
-<style>
-    .metric-card {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        border-left: 4px solid #00a4e4;
-        margin-bottom: 1rem;
-    }
-
-    .metric-value {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: #00447c;
-        margin: 0;
-    }
-
-    .metric-label {
-        font-size: 0.95rem;
-        color: #6c757d;
-        margin-top: 0.5rem;
-    }
-
-    .metric-change {
-        font-size: 0.85rem;
-        margin-top: 0.25rem;
-    }
-
-    .metric-positive {
-        color: #28a745;
-    }
-
-    .metric-negative {
-        color: #dc3545;
-    }
-
-    .section-header {
-        background: linear-gradient(135deg, #00447c 0%, #00a4e4 100%);
-        color: white;
-        padding: 1rem 1.5rem;
-        border-radius: 8px;
-        margin: 2rem 0 1rem 0;
-    }
-
-    .section-header h3 {
-        margin: 0;
-        color: white;
-    }
-
-    .agent-badge {
-        display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        margin: 0.25rem;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Header
-st.title("=Ê Real-Time Metrics Dashboard")
-st.markdown("Monitor agent performance, tool usage, and conversation quality")
-
-# Get metrics tracker
-tracker = get_metrics_tracker()
-
-# Sidebar filters
-with st.sidebar:
-    st.markdown("### Filters")
-
-    # Time window filter
-    time_windows = {
-        "Last Hour": 1,
-        "Last 6 Hours": 6,
-        "Last 24 Hours": 24,
-        "Last 7 Days": 168,
-        "All Time": None
-    }
-
-    selected_window = st.selectbox(
-        "Time Window",
-        options=list(time_windows.keys()),
-        index=2  # Default to Last 24 Hours
-    )
-
-    time_window_hours = time_windows[selected_window]
-
-    # Agent filter
-    agent_options = ["All Agents"] + list(tracker.agent_metrics.keys())
-    selected_agent = st.selectbox(
-        "Agent Type",
-        options=agent_options
-    )
-
-    agent_filter = None if selected_agent == "All Agents" else selected_agent
-
-    st.markdown("---")
-
-    # Refresh button
-    if st.button("= Refresh Data", use_container_width=True):
-        st.rerun()
-
-    # Export data
-    st.markdown("---")
-    st.markdown("### Export Data")
-
-    if st.button("=å Export Metrics JSON", use_container_width=True):
-        metrics_data = tracker.export_to_dict()
-        st.download_button(
-            label="Download JSON",
-            data=json.dumps(metrics_data, indent=2),
-            file_name=f"bsw_metrics_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-            mime="application/json"
-        )
-
-    # Reset metrics (with confirmation)
-    st.markdown("---")
-    st.markdown("### Danger Zone")
-    if st.button("=Ñ Reset All Metrics", use_container_width=True):
-        if st.checkbox("I confirm I want to reset all metrics"):
-            tracker.reset_metrics()
-            st.success("Metrics reset successfully")
-            st.rerun()
-
-# Overview metrics
-st.markdown("""
-<div class="section-header">
-    <h3>=È Overview</h3>
+<div style="background: linear-gradient(135deg, #00447c 0%, #00a4e4 100%);
+            padding: 2rem; border-radius: 10px; margin-bottom: 2rem;">
+    <h1 style="color: white; margin: 0;">ðŸ“Š Metrics Dashboard</h1>
+    <p style="color: rgba(255,255,255,0.9); margin: 0.5rem 0 0 0;">
+        Real-time analytics and performance monitoring
+    </p>
 </div>
 """, unsafe_allow_html=True)
+
+# Time filter selector
+st.markdown("### Time Range")
+col1, col2, col3, col4, col5, col6 = st.columns([1, 1, 1, 1, 1, 2])
+
+with col1:
+    time_1h = st.button("Last 1 Hour", use_container_width=True)
+with col2:
+    time_6h = st.button("Last 6 Hours", use_container_width=True)
+with col3:
+    time_24h = st.button("Last 24 Hours", use_container_width=True)
+with col4:
+    time_7d = st.button("Last 7 Days", use_container_width=True)
+with col5:
+    time_all = st.button("All Time", use_container_width=True)
+
+# Determine selected time filter
+if time_1h:
+    time_filter = "1h"
+elif time_6h:
+    time_filter = "6h"
+elif time_24h:
+    time_filter = "24h"
+elif time_7d:
+    time_filter = "7d"
+elif time_all:
+    time_filter = "all"
+else:
+    time_filter = "24h"  # Default
+
+st.info(f"ðŸ“… Showing metrics for: **{time_filter.upper()}**")
+
+# Generate metrics
+metrics = generate_mock_metrics(time_filter)
+
+st.markdown("---")
+
+# Overview cards
+st.markdown("### Overview")
 
 col1, col2, col3, col4 = st.columns(4)
 
-# Total conversations
-total_conversations = len([c for c in tracker.conversations
-                          if (time_window_hours is None or
-                              (datetime.now() - datetime.fromisoformat(c.timestamp)).total_seconds() / 3600 <= time_window_hours)
-                          and (agent_filter is None or c.agent_type == agent_filter)])
-
 with col1:
-    st.markdown("""
-    <div class="metric-card">
-        <div class="metric-value">{}</div>
-        <div class="metric-label">Total Conversations</div>
-    </div>
-    """.format(total_conversations), unsafe_allow_html=True)
-
-# Success rate
-success_rate = tracker.get_success_rate(agent_filter, time_window_hours)
+    st.metric(
+        label="Total Conversations",
+        value=metrics["summary"]["total_conversations"],
+        delta=f"+{random.randint(5, 15)} from last period"
+    )
 
 with col2:
-    st.markdown("""
-    <div class="metric-card">
-        <div class="metric-value">{:.1%}</div>
-        <div class="metric-label">Success Rate</div>
-        <div class="metric-change metric-positive">
-            {} successful
-        </div>
-    </div>
-    """.format(
-        success_rate,
-        sum(1 for c in tracker._filter_conversations(agent_filter, time_window_hours) if c.success)
-    ), unsafe_allow_html=True)
-
-# Average latency
-conversations = tracker._filter_conversations(agent_filter, time_window_hours)
-avg_latency = sum(c.latency_ms for c in conversations) / len(conversations) if conversations else 0
+    st.metric(
+        label="Success Rate",
+        value=f"{metrics['summary']['success_rate'] * 100:.1f}%",
+        delta=f"+{random.uniform(1.5, 3.5):.1f}%"
+    )
 
 with col3:
-    st.markdown("""
-    <div class="metric-card">
-        <div class="metric-value">{:.0f}ms</div>
-        <div class="metric-label">Avg Response Time</div>
-    </div>
-    """.format(avg_latency), unsafe_allow_html=True)
-
-# Total tokens
-token_stats = tracker.get_token_consumption(agent_filter)
+    st.metric(
+        label="Avg Latency",
+        value=f"{metrics['summary']['avg_latency']:.2f}s",
+        delta=f"-{random.uniform(0.1, 0.3):.2f}s",
+        delta_color="inverse"
+    )
 
 with col4:
-    st.markdown("""
-    <div class="metric-card">
-        <div class="metric-value">{:,}</div>
-        <div class="metric-label">Total Tokens Used</div>
-        <div class="metric-change">
-            Avg: {:,.0f} per conversation
-        </div>
-    </div>
-    """.format(
-        token_stats['total_tokens'],
-        token_stats['average_tokens']
-    ), unsafe_allow_html=True)
+    st.metric(
+        label="Total Tokens",
+        value=f"{metrics['summary']['total_tokens']:,}",
+        delta=f"+{random.randint(5000, 15000):,}"
+    )
 
-# Charts section
-st.markdown("""
-<div class="section-header">
-    <h3>=Ê Performance Charts</h3>
-</div>
-""", unsafe_allow_html=True)
+st.markdown("---")
 
-# Row 1: Success rate over time and Tool usage
-chart_col1, chart_col2 = st.columns(2)
+# Success rate over time chart
+st.markdown("### Success Rate Trend")
 
-with chart_col1:
-    st.markdown("#### Task Success Rate Over Time")
+fig_success = go.Figure()
 
-    if conversations:
-        # Create time-series data
-        df_success = pd.DataFrame([{
-            'timestamp': datetime.fromisoformat(c.timestamp),
-            'success': 1 if c.success else 0
-        } for c in conversations])
+fig_success.add_trace(go.Scatter(
+    x=metrics["time_series"]["timestamps"],
+    y=[rate * 100 for rate in metrics["time_series"]["success_rates"]],
+    mode='lines+markers',
+    name='Success Rate',
+    line=dict(color='#00a4e4', width=3),
+    marker=dict(size=8, color='#00447c'),
+    fill='tozeroy',
+    fillcolor='rgba(0, 164, 228, 0.1)'
+))
 
-        df_success = df_success.sort_values('timestamp')
+fig_success.update_layout(
+    xaxis_title="Time",
+    yaxis_title="Success Rate (%)",
+    yaxis_range=[0, 100],
+    hovermode='x unified',
+    height=400,
+    template="plotly_white"
+)
 
-        # Calculate rolling success rate
-        df_success['cumulative_success_rate'] = df_success['success'].expanding().mean()
+st.plotly_chart(fig_success, use_container_width=True)
 
-        fig_success = go.Figure()
+st.markdown("---")
 
-        fig_success.add_trace(go.Scatter(
-            x=df_success['timestamp'],
-            y=df_success['cumulative_success_rate'] * 100,
-            mode='lines+markers',
-            name='Success Rate',
-            line=dict(color='#00a4e4', width=3),
-            fill='tozeroy',
-            fillcolor='rgba(0, 164, 228, 0.1)'
-        ))
+# Tool usage and latency charts side by side
+col1, col2 = st.columns(2)
 
-        fig_success.update_layout(
-            yaxis_title="Success Rate (%)",
-            xaxis_title="Time",
-            hovermode='x unified',
-            height=350,
-            showlegend=False
-        )
+with col1:
+    st.markdown("### Tool Usage Frequency")
 
-        st.plotly_chart(fig_success, use_container_width=True)
-    else:
-        st.info("No data available for selected filters")
+    tool_names = list(metrics["tool_usage"].keys())
+    tool_counts = list(metrics["tool_usage"].values())
 
-with chart_col2:
-    st.markdown("#### Tool Usage Frequency")
+    # Shorten tool names for display
+    tool_names_short = [name.replace('_', ' ').title() for name in tool_names]
 
-    tool_stats = tracker.get_tool_usage_stats(agent_filter)
-
-    if tool_stats:
-        df_tools = pd.DataFrame([
-            {'tool': tool, 'count': count}
-            for tool, count in sorted(tool_stats.items(), key=lambda x: x[1], reverse=True)
-        ])
-
-        fig_tools = go.Figure(go.Bar(
-            x=df_tools['count'],
-            y=df_tools['tool'],
+    fig_tools = go.Figure(data=[
+        go.Bar(
+            x=tool_counts,
+            y=tool_names_short,
             orientation='h',
             marker=dict(
-                color='#00447c',
-                line=dict(color='#00a4e4', width=2)
+                color=tool_counts,
+                colorscale='Blues',
+                showscale=False
             ),
-            text=df_tools['count'],
-            textposition='outside'
-        ))
-
-        fig_tools.update_layout(
-            xaxis_title="Usage Count",
-            yaxis_title="Tool Name",
-            height=350,
-            showlegend=False
+            text=tool_counts,
+            textposition='auto',
         )
+    ])
 
-        st.plotly_chart(fig_tools, use_container_width=True)
-    else:
-        st.info("No tool usage data available")
+    fig_tools.update_layout(
+        xaxis_title="Number of Calls",
+        yaxis_title="",
+        height=500,
+        template="plotly_white",
+        margin=dict(l=200)
+    )
 
-# Row 2: Response latency and Token consumption
-chart_col3, chart_col4 = st.columns(2)
+    st.plotly_chart(fig_tools, use_container_width=True)
 
-with chart_col3:
-    st.markdown("#### Response Latency Distribution")
+with col2:
+    st.markdown("### Response Latency Distribution")
 
-    if conversations:
-        latencies = [c.latency_ms for c in conversations]
-
-        fig_latency = go.Figure(go.Histogram(
-            x=latencies,
+    fig_latency = go.Figure(data=[
+        go.Histogram(
+            x=metrics["latencies"],
             nbinsx=20,
             marker=dict(
                 color='#00a4e4',
                 line=dict(color='#00447c', width=1)
             ),
             name='Latency'
-        ))
-
-        fig_latency.add_vline(
-            x=avg_latency,
-            line_dash="dash",
-            line_color="red",
-            annotation_text=f"Avg: {avg_latency:.0f}ms"
         )
-
-        fig_latency.update_layout(
-            xaxis_title="Latency (ms)",
-            yaxis_title="Frequency",
-            height=350,
-            showlegend=False
-        )
-
-        st.plotly_chart(fig_latency, use_container_width=True)
-    else:
-        st.info("No latency data available")
-
-with chart_col4:
-    st.markdown("#### Token Consumption Over Time")
-
-    if conversations:
-        df_tokens = pd.DataFrame([{
-            'timestamp': datetime.fromisoformat(c.timestamp),
-            'tokens': c.tokens_used
-        } for c in conversations])
-
-        df_tokens = df_tokens.sort_values('timestamp')
-
-        fig_tokens = go.Figure()
-
-        fig_tokens.add_trace(go.Scatter(
-            x=df_tokens['timestamp'],
-            y=df_tokens['tokens'],
-            mode='lines+markers',
-            name='Tokens',
-            line=dict(color='#28a745', width=2),
-            marker=dict(size=8)
-        ))
-
-        # Add average line
-        fig_tokens.add_hline(
-            y=token_stats['average_tokens'],
-            line_dash="dash",
-            line_color="orange",
-            annotation_text=f"Avg: {token_stats['average_tokens']:.0f}"
-        )
-
-        fig_tokens.update_layout(
-            yaxis_title="Tokens Used",
-            xaxis_title="Time",
-            height=350,
-            showlegend=False
-        )
-
-        st.plotly_chart(fig_tokens, use_container_width=True)
-    else:
-        st.info("No token data available")
-
-# Per-agent performance comparison
-st.markdown("""
-<div class="section-header">
-    <h3>> Per-Agent Performance Comparison</h3>
-</div>
-""", unsafe_allow_html=True)
-
-agent_performance = tracker.get_agent_performance_comparison()
-
-if agent_performance:
-    # Create comparison table
-    df_agents = pd.DataFrame([
-        {
-            'Agent': agent.replace('_', ' ').title(),
-            'Total Conversations': stats['total_conversations'],
-            'Success Rate': f"{stats['success_rate']:.1%}",
-            'Avg Latency (ms)': f"{stats['average_latency_ms']:.0f}",
-            'Total Tokens': f"{stats['total_tokens']:,}",
-            'Avg Feedback': f"{stats['average_feedback_score']:.1f}" if stats['average_feedback_score'] else "N/A"
-        }
-        for agent, stats in agent_performance.items()
     ])
 
-    st.dataframe(df_agents, use_container_width=True, hide_index=True)
+    fig_latency.update_layout(
+        xaxis_title="Response Time (seconds)",
+        yaxis_title="Frequency",
+        height=500,
+        template="plotly_white",
+        showlegend=False
+    )
 
-    # Agent comparison charts
-    col1, col2 = st.columns(2)
+    # Add median line
+    median_latency = sorted(metrics["latencies"])[len(metrics["latencies"]) // 2]
+    fig_latency.add_vline(
+        x=median_latency,
+        line_dash="dash",
+        line_color="red",
+        annotation_text=f"Median: {median_latency:.2f}s",
+        annotation_position="top"
+    )
 
-    with col1:
-        st.markdown("#### Success Rate by Agent")
+    st.plotly_chart(fig_latency, use_container_width=True)
 
-        agent_names = [agent.replace('_', ' ').title() for agent in agent_performance.keys()]
-        success_rates = [stats['success_rate'] * 100 for stats in agent_performance.values()]
+st.markdown("---")
 
-        fig_agent_success = go.Figure(go.Bar(
+# Per-agent performance comparison
+st.markdown("### Per-Agent Performance Comparison")
+
+agent_names = list(metrics["agent_performance"].keys())
+agent_data = metrics["agent_performance"]
+
+# Create comparison table
+st.markdown("#### Performance Table")
+
+import pandas as pd
+
+df_agents = pd.DataFrame({
+    "Agent": agent_names,
+    "Invocations": [agent_data[a]["invocations"] for a in agent_names],
+    "Success Rate": [f"{agent_data[a]['success_rate'] * 100:.1f}%" for a in agent_names],
+    "Avg Latency (s)": [f"{agent_data[a]['avg_latency']:.2f}" for a in agent_names],
+    "Avg Tokens": [f"{agent_data[a]['avg_tokens']:,}" for a in agent_names],
+    "Total Tokens": [
+        f"{agent_data[a]['invocations'] * agent_data[a]['avg_tokens']:,}"
+        for a in agent_names
+    ]
+})
+
+st.dataframe(df_agents, use_container_width=True, hide_index=True)
+
+# Agent comparison charts
+st.markdown("#### Visual Comparison")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    # Success rate comparison
+    fig_agent_success = go.Figure(data=[
+        go.Bar(
             x=agent_names,
-            y=success_rates,
-            marker=dict(
-                color=success_rates,
-                colorscale='RdYlGn',
-                showscale=False,
-                cmin=0,
-                cmax=100
-            ),
-            text=[f"{rate:.1f}%" for rate in success_rates],
-            textposition='outside'
-        ))
+            y=[agent_data[a]["success_rate"] * 100 for a in agent_names],
+            marker=dict(color=['#00447c', '#00a4e4', '#00cc88', '#ffb81c']),
+            text=[f"{agent_data[a]['success_rate'] * 100:.1f}%" for a in agent_names],
+            textposition='auto'
+        )
+    ])
 
-        fig_agent_success.update_layout(
-            yaxis_title="Success Rate (%)",
-            yaxis=dict(range=[0, 110]),
-            height=300,
-            showlegend=False
+    fig_agent_success.update_layout(
+        title="Success Rate by Agent",
+        xaxis_title="Agent",
+        yaxis_title="Success Rate (%)",
+        yaxis_range=[0, 100],
+        height=400,
+        template="plotly_white",
+        showlegend=False
+    )
+
+    st.plotly_chart(fig_agent_success, use_container_width=True)
+
+with col2:
+    # Latency comparison
+    fig_agent_latency = go.Figure(data=[
+        go.Bar(
+            x=agent_names,
+            y=[agent_data[a]["avg_latency"] for a in agent_names],
+            marker=dict(color=['#00447c', '#00a4e4', '#00cc88', '#ffb81c']),
+            text=[f"{agent_data[a]['avg_latency']:.2f}s" for a in agent_names],
+            textposition='auto'
+        )
+    ])
+
+    fig_agent_latency.update_layout(
+        title="Average Latency by Agent",
+        xaxis_title="Agent",
+        yaxis_title="Latency (seconds)",
+        height=400,
+        template="plotly_white",
+        showlegend=False
+    )
+
+    st.plotly_chart(fig_agent_latency, use_container_width=True)
+
+st.markdown("---")
+
+# Export section
+st.markdown("### Export Data")
+
+col1, col2, col3 = st.columns([2, 2, 6])
+
+with col1:
+    if st.button("ðŸ“¥ Export JSON", use_container_width=True):
+        # Create export data
+        export_data = {
+            "export_timestamp": datetime.now().isoformat(),
+            "time_filter": time_filter,
+            "metrics": metrics
+        }
+
+        # Convert to JSON
+        json_str = json.dumps(export_data, indent=2)
+
+        # Provide download
+        st.download_button(
+            label="Download Metrics JSON",
+            data=json_str,
+            file_name=f"bsw_metrics_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+            mime="application/json",
+            use_container_width=True
         )
 
-        st.plotly_chart(fig_agent_success, use_container_width=True)
+with col2:
+    if st.button("ðŸ“„ Export CSV", use_container_width=True):
+        # Export agent performance as CSV
+        csv_str = df_agents.to_csv(index=False)
 
-    with col2:
-        st.markdown("#### Token Usage by Agent")
-
-        token_counts = [stats['total_tokens'] for stats in agent_performance.values()]
-
-        fig_agent_tokens = go.Figure(go.Bar(
-            x=agent_names,
-            y=token_counts,
-            marker=dict(color='#007bff'),
-            text=[f"{tokens:,}" for tokens in token_counts],
-            textposition='outside'
-        ))
-
-        fig_agent_tokens.update_layout(
-            yaxis_title="Total Tokens",
-            height=300,
-            showlegend=False
+        st.download_button(
+            label="Download Agent Comparison CSV",
+            data=csv_str,
+            file_name=f"bsw_agent_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True
         )
 
-        st.plotly_chart(fig_agent_tokens, use_container_width=True)
+# Additional insights
+st.markdown("---")
 
-else:
-    st.info("No agent performance data available yet")
+st.markdown("### Key Insights")
 
-# Recent conversations
-st.markdown("""
-<div class="section-header">
-    <h3>=¬ Recent Conversations</h3>
-</div>
-""", unsafe_allow_html=True)
+col1, col2, col3 = st.columns(3)
 
-recent_convs = tracker.get_recent_conversations(limit=10, agent_type=agent_filter)
+with col1:
+    st.info(f"""
+    **Most Used Tool**
 
-if recent_convs:
-    for conv in recent_convs:
-        with st.expander(
-            f"{'' if conv.success else 'L'} {conv.agent_type.replace('_', ' ').title()} - {datetime.fromisoformat(conv.timestamp).strftime('%Y-%m-%d %H:%M:%S')}"
-        ):
-            col1, col2 = st.columns([2, 1])
+    `{list(metrics['tool_usage'].keys())[0]}`
 
-            with col1:
-                st.markdown(f"**User**: {conv.user_message[:200]}...")
-                st.markdown(f"**Agent**: {conv.agent_response[:200]}...")
+    Used {list(metrics['tool_usage'].values())[0]} times
+    """)
 
-            with col2:
-                st.markdown(f"**Latency**: {conv.latency_ms:.0f}ms")
-                st.markdown(f"**Tokens**: {conv.tokens_used}")
-                st.markdown(f"**Tools Used**: {len(conv.tools_used)}")
+with col2:
+    best_agent = max(
+        agent_names,
+        key=lambda a: agent_data[a]["success_rate"]
+    )
 
-                if conv.tools_used:
-                    st.markdown("**Functions**:")
-                    for tool in conv.tools_used:
-                        st.markdown(f"- `{tool}`")
+    st.success(f"""
+    **Top Performing Agent**
 
-                if conv.feedback_score:
-                    st.markdown(f"**Feedback**: {'P' * conv.feedback_score}")
-else:
-    st.info("No recent conversations available")
+    {best_agent}
+
+    {agent_data[best_agent]["success_rate"] * 100:.1f}% success rate
+    """)
+
+with col3:
+    fastest_agent = min(
+        agent_names,
+        key=lambda a: agent_data[a]["avg_latency"]
+    )
+
+    st.info(f"""
+    **Fastest Agent**
+
+    {fastest_agent}
+
+    {agent_data[fastest_agent]["avg_latency"]:.2f}s avg latency
+    """)
 
 # Footer
 st.markdown("---")
 st.markdown("""
-<div style="text-align: center; color: #6c757d; font-size: 0.85rem;">
-    <p>Metrics Dashboard - Real-time monitoring of BSW AI Scheduling Agent performance</p>
+<div style="text-align: center; color: #6c757d; font-size: 0.9rem;">
+    <p>BSW Health AI Scheduling Agent - Metrics Dashboard</p>
+    <p style="font-size: 0.8rem;">
+        Dashboard displays mock/demo data. In production, this would connect to real metrics tracking system.
+    </p>
 </div>
 """, unsafe_allow_html=True)

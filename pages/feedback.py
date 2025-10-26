@@ -1,463 +1,455 @@
 """
-BSW Scheduling Agent - Feedback & Preference Labeling
-Interface for collecting user feedback and preference labeling for model improvement.
+Feedback Page - Preference labeling and conversation rating system.
+
+This page provides:
+- Side-by-side response comparison for preference labeling
+- Conversation quality rating
+- Human-in-the-loop feedback collection
+- Dataset building for fine-tuning and evaluation
+- Feedback history and analytics
 """
 
 import streamlit as st
 from datetime import datetime
+from typing import Dict, Any, List, Optional
 import json
-import pandas as pd
-
-from evaluation.metrics import get_metrics_tracker
+import os
 
 # Page configuration
 st.set_page_config(
     page_title="Feedback - BSW Scheduling Agent",
-    page_icon="P",
+    page_icon="⭐",
     layout="wide"
 )
 
-# Custom CSS
-st.markdown("""
-<style>
-    .feedback-card {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        margin-bottom: 1rem;
-        border-left: 4px solid #00a4e4;
-    }
-
-    .conversation-box {
-        background: #f8f9fa;
-        padding: 1rem;
-        border-radius: 6px;
-        margin: 1rem 0;
-        border: 1px solid #dee2e6;
-    }
-
-    .user-message {
-        background: #e7f3ff;
-        padding: 0.75rem;
-        border-radius: 6px;
-        margin: 0.5rem 0;
-        border-left: 3px solid #00a4e4;
-    }
-
-    .agent-message {
-        background: #f1f3f5;
-        padding: 0.75rem;
-        border-radius: 6px;
-        margin: 0.5rem 0;
-        border-left: 3px solid #00447c;
-    }
-
-    .rating-button {
-        display: inline-block;
-        padding: 0.5rem 1rem;
-        margin: 0.25rem;
-        border-radius: 6px;
-        background: #f8f9fa;
-        border: 2px solid #dee2e6;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .rating-button:hover {
-        background: #e9ecef;
-        border-color: #00a4e4;
-    }
-
-    .rating-button.selected {
-        background: #00a4e4;
-        color: white;
-        border-color: #00447c;
-    }
-
-    .star-rating {
-        font-size: 2rem;
-        color: #ffc107;
-    }
-
-    .feedback-summary {
-        background: linear-gradient(135deg, #00447c 0%, #00a4e4 100%);
-        color: white;
-        padding: 1.5rem;
-        border-radius: 8px;
-        margin: 1rem 0;
-    }
-
-    .summary-stat {
-        text-align: center;
-        padding: 1rem;
-    }
-
-    .summary-stat .number {
-        font-size: 2rem;
-        font-weight: 700;
-        color: white;
-    }
-
-    .summary-stat .label {
-        font-size: 0.9rem;
-        opacity: 0.9;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Header
-st.title("P Feedback & Preference Labeling")
-st.markdown("Help improve the AI scheduling agent by rating conversations and providing feedback")
-
-# Get metrics tracker
-tracker = get_metrics_tracker()
-
 # Initialize session state
-if 'feedback_submitted' not in st.session_state:
-    st.session_state.feedback_submitted = False
+if "feedback_history" not in st.session_state:
+    st.session_state.feedback_history = []
 
-if 'current_conv_index' not in st.session_state:
-    st.session_state.current_conv_index = 0
+if "current_comparison" not in st.session_state:
+    st.session_state.current_comparison = None
 
-# Tabs for different feedback modes
-tab1, tab2, tab3 = st.tabs(["=� Rate Conversations", "<� Compare Responses", "=� Feedback Summary"])
+# Helper functions
+def save_feedback(feedback_data: Dict[str, Any]):
+    """Save feedback to session state and optionally to file."""
+    feedback_data["timestamp"] = datetime.now().isoformat()
+    st.session_state.feedback_history.append(feedback_data)
 
-# Tab 1: Rate individual conversations
-with tab1:
-    st.markdown("### Rate Recent Conversations")
-    st.markdown("Provide feedback on individual conversations to help improve response quality")
+    # Optionally save to file (in production, would go to database)
+    try:
+        feedback_file = "feedback_data.jsonl"
+        with open(feedback_file, 'a') as f:
+            f.write(json.dumps(feedback_data) + '\n')
+    except Exception as e:
+        st.warning(f"Could not save to file: {e}")
 
-    # Get conversations without feedback
-    conversations_without_feedback = [
-        c for c in tracker.conversations
-        if c.feedback_score is None
+def generate_sample_responses() -> Dict[str, str]:
+    """Generate sample responses for comparison demo."""
+    samples = [
+        {
+            "scenario": "Patient needs orthopedic follow-up",
+            "prompt": "I had knee replacement surgery 2 weeks ago and need a follow-up appointment with Dr. Martinez.",
+            "response_a": "I can help you schedule that follow-up. Let me check Dr. Martinez's availability. I see he has openings on Thursday at 10 AM and Friday at 2:30 PM at the Plano location. Which time works better for you?",
+            "response_b": "I'll help you book your post-operative follow-up with Dr. Martinez. For knee replacement patients, we recommend a 2-week follow-up, which aligns perfectly with your timeline. Dr. Martinez has availability this Thursday at 10:00 AM or Friday at 2:30 PM, both at BSW Medical Center - Plano (4708 Alliance Blvd). Please bring your physical therapy notes to the appointment. Which time would you prefer?"
+        },
+        {
+            "scenario": "Patient with chest pain needs cardiology",
+            "prompt": "I've been having chest pain and my doctor referred me to see a cardiologist.",
+            "response_a": "I can schedule you with a cardiologist. We have Dr. Patel available next week. Would you like morning or afternoon?",
+            "response_b": "I understand you've been experiencing chest pain and have a referral for cardiology evaluation. First, I want to make sure this isn't an emergency - are you experiencing chest pain right now? If yes, please call 911. If this is for scheduled follow-up, I can help you book an urgent appointment with our cardiology team. Dr. Patel has availability within the next 3 days. Let me also verify your insurance coverage and referral status."
+        },
+        {
+            "scenario": "Annual wellness visit",
+            "prompt": "I need to schedule my annual physical exam.",
+            "response_a": "Sure, I can schedule your annual physical. Which day works best for you?",
+            "response_b": "Great! I'm glad you're staying on top of your preventive care. Annual wellness visits are typically covered at no copay by most insurance plans. I recommend scheduling a morning appointment since we'll likely be doing fasting bloodwork. Do you have an existing primary care provider with us, or would you like me to help you find a PCP? Also, which BSW location is most convenient for you?"
+        }
     ]
 
-    if conversations_without_feedback:
-        # Show conversation count
-        st.info(f"**{len(conversations_without_feedback)}** conversations awaiting feedback")
+    import random
+    return random.choice(samples)
 
-        # Pagination
-        items_per_page = 5
-        total_pages = (len(conversations_without_feedback) + items_per_page - 1) // items_per_page
+# Page header
+st.markdown("""
+<div style="background: linear-gradient(135deg, #00447c 0%, #00a4e4 100%);
+            padding: 2rem; border-radius: 10px; margin-bottom: 2rem;">
+    <h1 style="color: white; margin: 0;">⭐ Feedback & Preference Labeling</h1>
+    <p style="color: rgba(255,255,255,0.9); margin: 0.5rem 0 0 0;">
+        Help improve the AI scheduling assistant through human feedback
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
-        col1, col2, col3 = st.columns([1, 3, 1])
+# Create tabs
+tab1, tab2, tab3 = st.tabs([
+    "📊 Response Comparison",
+    "⭐ Rate Conversation",
+    "📈 Feedback Analytics"
+])
 
-        with col1:
-            if st.button(" Previous") and st.session_state.current_conv_index > 0:
-                st.session_state.current_conv_index -= items_per_page
-                st.rerun()
-
-        with col2:
-            current_page = st.session_state.current_conv_index // items_per_page + 1
-            st.markdown(f"<div style='text-align: center;'>Page {current_page} of {total_pages}</div>",
-                       unsafe_allow_html=True)
-
-        with col3:
-            if st.button("Next �") and st.session_state.current_conv_index + items_per_page < len(conversations_without_feedback):
-                st.session_state.current_conv_index += items_per_page
-                st.rerun()
-
-        # Display conversations for current page
-        start_idx = st.session_state.current_conv_index
-        end_idx = min(start_idx + items_per_page, len(conversations_without_feedback))
-
-        for i, conv in enumerate(conversations_without_feedback[start_idx:end_idx], start=start_idx):
-            with st.container():
-                st.markdown(f"""
-                <div class="feedback-card">
-                    <h4>Conversation #{i + 1} - {conv.agent_type.replace('_', ' ').title()}</h4>
-                    <small>{datetime.fromisoformat(conv.timestamp).strftime('%Y-%m-%d %H:%M:%S')}</small>
-                </div>
-                """, unsafe_allow_html=True)
-
-                col1, col2 = st.columns([2, 1])
-
-                with col1:
-                    st.markdown(f"""
-                    <div class="user-message">
-                        <strong>User:</strong> {conv.user_message}
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    st.markdown(f"""
-                    <div class="agent-message">
-                        <strong>Agent:</strong> {conv.agent_response}
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    if conv.tools_used:
-                        with st.expander(f"=' Tools Used ({len(conv.tools_used)})"):
-                            for tool in conv.tools_used:
-                                st.markdown(f"- `{tool}`")
-
-                with col2:
-                    st.markdown("#### Rate this conversation")
-
-                    # Star rating
-                    rating = st.radio(
-                        "Quality Rating",
-                        options=[1, 2, 3, 4, 5],
-                        format_func=lambda x: "P" * x,
-                        key=f"rating_{conv.conversation_id}",
-                        horizontal=True
-                    )
-
-                    # Feedback comment
-                    comment = st.text_area(
-                        "Comments (optional)",
-                        placeholder="What worked well? What could be improved?",
-                        key=f"comment_{conv.conversation_id}",
-                        height=100
-                    )
-
-                    # Submit button
-                    if st.button("Submit Feedback", key=f"submit_{conv.conversation_id}", use_container_width=True):
-                        tracker.add_feedback(
-                            conversation_id=conv.conversation_id,
-                            score=rating,
-                            comment=comment if comment else None
-                        )
-                        st.success("Feedback submitted successfully!")
-                        st.rerun()
-
-                st.markdown("---")
-
-    else:
-        st.info("All recent conversations have been rated. Thank you for your feedback!")
-
-        # Show button to view rated conversations
-        if st.button("View Rated Conversations"):
-            st.session_state.show_rated = True
-
-        if st.session_state.get('show_rated', False):
-            rated_conversations = [c for c in tracker.conversations if c.feedback_score is not None]
-
-            for conv in rated_conversations[-10:]:  # Show last 10 rated
-                with st.expander(
-                    f"{'P' * conv.feedback_score} {conv.agent_type.title()} - {datetime.fromisoformat(conv.timestamp).strftime('%Y-%m-%d %H:%M')}"
-                ):
-                    st.markdown(f"**User**: {conv.user_message}")
-                    st.markdown(f"**Agent**: {conv.agent_response}")
-                    if conv.feedback_comment:
-                        st.markdown(f"**Comment**: {conv.feedback_comment}")
-
-# Tab 2: Compare responses (preference labeling)
-with tab2:
+# Tab 1: Response Comparison
+with tab1:
     st.markdown("### Side-by-Side Response Comparison")
-    st.markdown("Compare different agent responses to help identify preferred patterns")
 
     st.info("""
-    **Coming Soon!**
-
-    This feature will allow you to:
-    - View two different agent responses to similar queries
-    - Select which response is better
-    - Provide reasoning for your preference
-    - Build a dataset for fine-tuning and evaluation
+    **Purpose**: Compare two agent responses to the same prompt and indicate which is better.
+    This helps build a preference dataset for fine-tuning and evaluation.
     """)
 
-    # Placeholder for future implementation
+    # Generate or use existing comparison
+    if st.button("🔄 Generate New Comparison", use_container_width=False):
+        st.session_state.current_comparison = generate_sample_responses()
+
+    if st.session_state.current_comparison is None:
+        st.session_state.current_comparison = generate_sample_responses()
+
+    comparison = st.session_state.current_comparison
+
+    # Display scenario and prompt
+    st.markdown("#### Scenario")
+    st.markdown(f"**{comparison['scenario']}**")
+
+    st.markdown("#### Patient Prompt")
+    st.code(comparison['prompt'], language="text")
+
+    st.markdown("---")
+
+    # Side-by-side comparison
+    st.markdown("#### Compare Responses")
+
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("#### Response A")
-        st.markdown("""
-        <div class="conversation-box">
-            <div class="agent-message">
-                <strong>Agent:</strong> I can help you schedule an appointment with Dr. Anderson,
-                our orthopedic specialist. He has availability next Tuesday at 2:00 PM.
-                Would you like me to book that for you?
-            </div>
+        st.markdown("##### Response A")
+        st.markdown(f"""
+        <div style="background-color: #f0f8ff; padding: 1.5rem; border-radius: 8px;
+                    border-left: 4px solid #00a4e4; min-height: 200px;">
+            {comparison['response_a']}
         </div>
         """, unsafe_allow_html=True)
-
-        st.button("Prefer Response A", key="prefer_a", disabled=True)
 
     with col2:
-        st.markdown("#### Response B")
-        st.markdown("""
-        <div class="conversation-box">
-            <div class="agent-message">
-                <strong>Agent:</strong> I'd be happy to help schedule your orthopedic follow-up.
-                Let me check Dr. Anderson's availability since you saw him for surgery.
-                I have several options: Tuesday 2:00 PM, Wednesday 10:00 AM, or Thursday 3:30 PM.
-                Which works best for you?
-            </div>
+        st.markdown("##### Response B")
+        st.markdown(f"""
+        <div style="background-color: #f0fff0; padding: 1.5rem; border-radius: 8px;
+                    border-left: 4px solid #00cc88; min-height: 200px;">
+            {comparison['response_b']}
         </div>
         """, unsafe_allow_html=True)
 
-        st.button("Prefer Response B", key="prefer_b", disabled=True)
+    st.markdown("---")
 
-    st.text_area(
-        "Explain your preference (optional)",
-        placeholder="Why did you prefer this response?",
-        disabled=True
-    )
+    # Preference selection
+    st.markdown("#### Your Preference")
 
-    st.button("Submit Comparison", disabled=True)
+    col1, col2, col3, col4 = st.columns([2, 2, 2, 4])
 
-# Tab 3: Feedback summary
-with tab3:
-    st.markdown("### Feedback Summary & Analytics")
+    with col1:
+        prefer_a = st.button("👈 Prefer Response A", use_container_width=True)
 
-    # Overall feedback stats
-    rated_conversations = [c for c in tracker.conversations if c.feedback_score is not None]
+    with col2:
+        prefer_b = st.button("👉 Prefer Response B", use_container_width=True)
 
-    if rated_conversations:
-        # Summary cards
-        col1, col2, col3, col4 = st.columns(4)
+    with col3:
+        prefer_tie = st.button("🤝 Both Equal", use_container_width=True)
 
-        with col1:
-            st.markdown("""
-            <div class="feedback-summary">
-                <div class="summary-stat">
-                    <div class="number">{}</div>
-                    <div class="label">Total Ratings</div>
-                </div>
-            </div>
-            """.format(len(rated_conversations)), unsafe_allow_html=True)
+    # Process selection
+    if prefer_a or prefer_b or prefer_tie:
+        preference = "A" if prefer_a else ("B" if prefer_b else "Tie")
 
-        with col2:
-            avg_rating = sum(c.feedback_score for c in rated_conversations) / len(rated_conversations)
-            st.markdown("""
-            <div class="feedback-summary">
-                <div class="summary-stat">
-                    <div class="number">{:.2f}</div>
-                    <div class="label">Average Rating</div>
-                </div>
-            </div>
-            """.format(avg_rating), unsafe_allow_html=True)
+        st.success(f"✅ Preference recorded: **{preference}**")
 
-        with col3:
-            five_star = sum(1 for c in rated_conversations if c.feedback_score == 5)
-            st.markdown("""
-            <div class="feedback-summary">
-                <div class="summary-stat">
-                    <div class="number">{}P</div>
-                    <div class="label">5-Star Ratings</div>
-                </div>
-            </div>
-            """.format(five_star), unsafe_allow_html=True)
+        # Collect additional feedback
+        with st.form("detailed_feedback"):
+            st.markdown("##### Why did you choose this response?")
 
-        with col4:
-            low_rating = sum(1 for c in rated_conversations if c.feedback_score <= 2)
-            st.markdown("""
-            <div class="feedback-summary">
-                <div class="summary-stat">
-                    <div class="number">{}</div>
-                    <div class="label">Low Ratings</div>
-                </div>
-            </div>
-            """.format(low_rating), unsafe_allow_html=True)
-
-        # Rating distribution
-        st.markdown("#### Rating Distribution")
-
-        rating_counts = {i: 0 for i in range(1, 6)}
-        for conv in rated_conversations:
-            rating_counts[conv.feedback_score] = rating_counts.get(conv.feedback_score, 0) + 1
-
-        import plotly.graph_objects as go
-
-        fig = go.Figure(go.Bar(
-            x=[f"{i} Star{'s' if i > 1 else ''}" for i in range(1, 6)],
-            y=[rating_counts[i] for i in range(1, 6)],
-            marker=dict(
-                color=['#dc3545', '#fd7e14', '#ffc107', '#28a745', '#28a745'],
-                line=dict(color='#00447c', width=2)
-            ),
-            text=[rating_counts[i] for i in range(1, 6)],
-            textposition='outside'
-        ))
-
-        fig.update_layout(
-            yaxis_title="Count",
-            height=300,
-            showlegend=False
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-        # Feedback by agent type
-        st.markdown("#### Average Rating by Agent Type")
-
-        agent_ratings = {}
-        for conv in rated_conversations:
-            if conv.agent_type not in agent_ratings:
-                agent_ratings[conv.agent_type] = []
-            agent_ratings[conv.agent_type].append(conv.feedback_score)
-
-        df_agent_feedback = pd.DataFrame([
-            {
-                'Agent': agent.replace('_', ' ').title(),
-                'Average Rating': sum(scores) / len(scores),
-                'Total Ratings': len(scores),
-                '5-Star %': f"{sum(1 for s in scores if s == 5) / len(scores) * 100:.1f}%"
-            }
-            for agent, scores in agent_ratings.items()
-        ])
-
-        st.dataframe(df_agent_feedback, use_container_width=True, hide_index=True)
-
-        # Recent feedback comments
-        st.markdown("#### Recent Feedback Comments")
-
-        comments = [c for c in rated_conversations if c.feedback_comment][-10:]
-
-        if comments:
-            for conv in comments:
-                with st.expander(
-                    f"{'P' * conv.feedback_score} {conv.agent_type.replace('_', ' ').title()} - {datetime.fromisoformat(conv.timestamp).strftime('%Y-%m-%d %H:%M')}"
-                ):
-                    st.markdown(f"**Rating**: {'P' * conv.feedback_score}")
-                    st.markdown(f"**Comment**: {conv.feedback_comment}")
-                    st.markdown(f"**User Message**: {conv.user_message[:200]}...")
-        else:
-            st.info("No feedback comments available yet")
-
-        # Export feedback data
-        st.markdown("---")
-        st.markdown("#### Export Feedback Data")
-
-        if st.button("=� Download Feedback Dataset (CSV)", use_container_width=True):
-            df_export = pd.DataFrame([
-                {
-                    'conversation_id': c.conversation_id,
-                    'timestamp': c.timestamp,
-                    'agent_type': c.agent_type,
-                    'user_message': c.user_message,
-                    'agent_response': c.agent_response,
-                    'feedback_score': c.feedback_score,
-                    'feedback_comment': c.feedback_comment or '',
-                    'tools_used': ', '.join(c.tools_used),
-                    'latency_ms': c.latency_ms,
-                    'tokens_used': c.tokens_used
-                }
-                for c in rated_conversations
-            ])
-
-            csv = df_export.to_csv(index=False)
-            st.download_button(
-                label="Download CSV",
-                data=csv,
-                file_name=f"bsw_feedback_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv"
+            reasons = st.multiselect(
+                "Select all that apply:",
+                [
+                    "More thorough and detailed",
+                    "Better addresses patient needs",
+                    "More empathetic tone",
+                    "Includes important safety considerations",
+                    "Better uses medical protocols",
+                    "More natural and conversational",
+                    "Provides clearer next steps",
+                    "Better insurance/coverage handling"
+                ]
             )
 
-    else:
-        st.info("""
-        No feedback data available yet.
+            additional_comments = st.text_area(
+                "Additional comments (optional):",
+                placeholder="Any other observations or suggestions..."
+            )
 
-        Start by rating conversations in the **Rate Conversations** tab.
+            submitted = st.form_submit_button("Submit Feedback")
+
+            if submitted:
+                feedback_data = {
+                    "type": "preference_comparison",
+                    "scenario": comparison["scenario"],
+                    "prompt": comparison["prompt"],
+                    "response_a": comparison["response_a"],
+                    "response_b": comparison["response_b"],
+                    "preference": preference,
+                    "reasons": reasons,
+                    "comments": additional_comments
+                }
+
+                save_feedback(feedback_data)
+
+                st.success("🎉 Thank you! Your feedback has been saved.")
+
+                # Generate new comparison
+                st.session_state.current_comparison = generate_sample_responses()
+                st.rerun()
+
+# Tab 2: Rate Conversation
+with tab2:
+    st.markdown("### Rate a Conversation")
+
+    st.info("""
+    **Purpose**: Evaluate the overall quality of a conversation between patient and agent.
+    Rate different aspects to help identify areas for improvement.
+    """)
+
+    # Sample conversation display
+    st.markdown("#### Sample Conversation")
+
+    sample_conversation = [
+        ("user", "I need to schedule an appointment for my knee pain."),
+        ("assistant", "I can help you schedule an appointment for your knee pain. To find the right specialist, can you tell me more about your knee pain? Is this from an injury, surgery, or chronic condition?"),
+        ("user", "It's from arthritis. I need to see an orthopedic doctor."),
+        ("assistant", "I understand. Let me find an orthopedic specialist for you. Do you have a location preference - Dallas, Plano, Arlington, or Temple? Also, do you have insurance I should verify?"),
+        ("user", "Plano is good. I have Blue Cross Blue Shield."),
+        ("assistant", "Perfect. I found Dr. David Anderson, an orthopedic surgeon specializing in joint replacement at BSW Medical Center - Plano. He accepts Blue Cross Blue Shield. I should note that BCBS requires a referral for specialist visits. Do you have a referral from your primary care physician?")
+    ]
+
+    for role, message in sample_conversation:
+        if role == "user":
+            st.markdown(f"""
+            <div style="background-color: #e3f2fd; padding: 1rem; border-radius: 8px;
+                        margin: 0.5rem 0; border-left: 4px solid #2196f3;">
+                <strong>Patient:</strong> {message}
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div style="background-color: #f3e5f5; padding: 1rem; border-radius: 8px;
+                        margin: 0.5rem 0; border-left: 4px solid #9c27b0;">
+                <strong>Assistant:</strong> {message}
+            </div>
+            """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # Rating form
+    with st.form("conversation_rating"):
+        st.markdown("#### Rate This Conversation")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            relevance = st.slider(
+                "**Relevance**: Responses address patient needs",
+                min_value=1, max_value=5, value=4,
+                help="How well did the agent understand and address what the patient needed?"
+            )
+
+            helpfulness = st.slider(
+                "**Helpfulness**: Provides actionable information",
+                min_value=1, max_value=5, value=4,
+                help="Did the agent provide useful, actionable information?"
+            )
+
+            accuracy = st.slider(
+                "**Accuracy**: Information is correct",
+                min_value=1, max_value=5, value=5,
+                help="Was the information factually accurate?"
+            )
+
+        with col2:
+            naturalness = st.slider(
+                "**Naturalness**: Conversation flows naturally",
+                min_value=1, max_value=5, value=4,
+                help="Did the conversation feel natural and human-like?"
+            )
+
+            empathy = st.slider(
+                "**Empathy**: Shows understanding and care",
+                min_value=1, max_value=5, value=4,
+                help="Did the agent show appropriate empathy and bedside manner?"
+            )
+
+            efficiency = st.slider(
+                "**Efficiency**: Gets to the point quickly",
+                min_value=1, max_value=5, value=3,
+                help="Was the agent efficient without unnecessary back-and-forth?"
+            )
+
+        st.markdown("---")
+
+        task_completed = st.checkbox("✅ Task was successfully completed")
+
+        overall_sentiment = st.radio(
+            "Overall sentiment about this conversation:",
+            ["😊 Very Satisfied", "🙂 Satisfied", "😐 Neutral", "😕 Unsatisfied", "😞 Very Unsatisfied"],
+            index=1
+        )
+
+        what_went_well = st.text_area(
+            "What went well?",
+            placeholder="What did the agent do particularly well?"
+        )
+
+        what_needs_improvement = st.text_area(
+            "What needs improvement?",
+            placeholder="What could be better?"
+        )
+
+        submitted_rating = st.form_submit_button("Submit Rating")
+
+        if submitted_rating:
+            rating_data = {
+                "type": "conversation_rating",
+                "ratings": {
+                    "relevance": relevance,
+                    "helpfulness": helpfulness,
+                    "accuracy": accuracy,
+                    "naturalness": naturalness,
+                    "empathy": empathy,
+                    "efficiency": efficiency,
+                    "average": round((relevance + helpfulness + accuracy + naturalness + empathy + efficiency) / 6, 2)
+                },
+                "task_completed": task_completed,
+                "overall_sentiment": overall_sentiment,
+                "what_went_well": what_went_well,
+                "what_needs_improvement": what_needs_improvement
+            }
+
+            save_feedback(rating_data)
+
+            st.success("🎉 Thank you! Your rating has been recorded.")
+
+# Tab 3: Feedback Analytics
+with tab3:
+    st.markdown("### Feedback Analytics")
+
+    if not st.session_state.feedback_history:
+        st.info("""
+        📊 **No feedback data yet**
+
+        Provide feedback in the other tabs to see analytics here.
+
+        This section will show:
+        - Preference distribution (Response A vs B vs Tie)
+        - Average conversation ratings
+        - Common improvement themes
+        - Feedback trends over time
         """)
+    else:
+        # Summary metrics
+        st.markdown("#### Summary")
+
+        total_feedback = len(st.session_state.feedback_history)
+
+        comparisons = [f for f in st.session_state.feedback_history if f["type"] == "preference_comparison"]
+        ratings = [f for f in st.session_state.feedback_history if f["type"] == "conversation_rating"]
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            st.metric("Total Feedback Items", total_feedback)
+
+        with col2:
+            st.metric("Response Comparisons", len(comparisons))
+
+        with col3:
+            st.metric("Conversation Ratings", len(ratings))
+
+        st.markdown("---")
+
+        # Preference distribution
+        if comparisons:
+            st.markdown("#### Preference Distribution")
+
+            from collections import Counter
+            preferences = [c["preference"] for c in comparisons]
+            pref_counts = Counter(preferences)
+
+            col1, col2 = st.columns([2, 3])
+
+            with col1:
+                st.markdown("**Preference Counts**")
+                for pref, count in pref_counts.items():
+                    st.metric(f"Response {pref}", count)
+
+            with col2:
+                st.markdown("**Common Reasons**")
+                all_reasons = []
+                for c in comparisons:
+                    all_reasons.extend(c.get("reasons", []))
+
+                reason_counts = Counter(all_reasons)
+                for reason, count in reason_counts.most_common(5):
+                    st.markdown(f"- {reason}: **{count}** times")
+
+        st.markdown("---")
+
+        # Average ratings
+        if ratings:
+            st.markdown("#### Average Conversation Ratings")
+
+            avg_ratings = {
+                "Relevance": sum(r["ratings"]["relevance"] for r in ratings) / len(ratings),
+                "Helpfulness": sum(r["ratings"]["helpfulness"] for r in ratings) / len(ratings),
+                "Accuracy": sum(r["ratings"]["accuracy"] for r in ratings) / len(ratings),
+                "Naturalness": sum(r["ratings"]["naturalness"] for r in ratings) / len(ratings),
+                "Empathy": sum(r["ratings"]["empathy"] for r in ratings) / len(ratings),
+                "Efficiency": sum(r["ratings"]["efficiency"] for r in ratings) / len(ratings),
+            }
+
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.metric("Relevance", f"{avg_ratings['Relevance']:.2f} / 5")
+                st.metric("Helpfulness", f"{avg_ratings['Helpfulness']:.2f} / 5")
+
+            with col2:
+                st.metric("Accuracy", f"{avg_ratings['Accuracy']:.2f} / 5")
+                st.metric("Naturalness", f"{avg_ratings['Naturalness']:.2f} / 5")
+
+            with col3:
+                st.metric("Empathy", f"{avg_ratings['Empathy']:.2f} / 5")
+                st.metric("Efficiency", f"{avg_ratings['Efficiency']:.2f} / 5")
+
+        st.markdown("---")
+
+        # Feedback history
+        st.markdown("#### Feedback History")
+
+        for i, feedback in enumerate(reversed(st.session_state.feedback_history[-10:])):
+            with st.expander(f"Feedback #{len(st.session_state.feedback_history) - i} - {feedback.get('timestamp', 'Unknown')}"):
+                st.json(feedback)
+
+        # Export button
+        if st.button("📥 Export All Feedback as JSON"):
+            json_str = json.dumps(st.session_state.feedback_history, indent=2)
+
+            st.download_button(
+                label="Download Feedback JSON",
+                data=json_str,
+                file_name=f"bsw_feedback_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json"
+            )
 
 # Footer
 st.markdown("---")
 st.markdown("""
-<div style="text-align: center; color: #6c757d; font-size: 0.85rem;">
-    <p>Your feedback helps improve the AI scheduling agent for all patients</p>
-    <p>Thank you for contributing to better healthcare experiences!</p>
+<div style="text-align: center; color: #6c757d; font-size: 0.9rem;">
+    <p>BSW Health AI Scheduling Agent - Feedback System</p>
+    <p style="font-size: 0.8rem;">
+        Your feedback helps improve the AI assistant and builds datasets for future enhancements.
+    </p>
 </div>
 """, unsafe_allow_html=True)
