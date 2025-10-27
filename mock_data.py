@@ -62,9 +62,14 @@ class Provider:
     insurance_accepted: List[str]
     availability_days: List[str]
     typical_slot_duration: int  # minutes
-    
+    provider_type: str = "Physician"  # "Physician", "PA", "NP"
+    supervising_physician: Optional[str] = None  # For PAs/NPs, ID of supervising physician
+
     def __str__(self):
-        return f"Dr. {self.first_name} {self.last_name}, {self.credentials} - {self.specialty}"
+        if self.provider_type == "Physician":
+            return f"Dr. {self.first_name} {self.last_name}, {self.credentials} - {self.specialty}"
+        else:
+            return f"{self.first_name} {self.last_name}, {self.credentials} - {self.specialty} ({self.provider_type})"
 
 
 @dataclass
@@ -377,7 +382,85 @@ PROVIDERS = [
         availability_days=["Monday", "Tuesday", "Wednesday", "Friday"],
         typical_slot_duration=30
     ),
-    
+
+    # Orthopedic PAs and NPs (Post-op follow-up providers)
+    Provider(
+        provider_id="PA001",
+        first_name="Michael",
+        last_name="Chen",
+        specialty="Orthopedic Surgery",
+        sub_specialty="Joint Replacement (PA)",
+        credentials="PA-C",
+        location="BSW Medical Center - Dallas",
+        address="3500 Gaston Ave",
+        city="Dallas",
+        phone="214-820-0111",
+        accepting_new_patients=True,
+        languages=["English", "Mandarin"],
+        insurance_accepted=["Blue Cross Blue Shield", "Aetna", "United Healthcare", "Medicare", "Medicaid"],
+        availability_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        typical_slot_duration=20,
+        provider_type="PA",
+        supervising_physician="DR001"
+    ),
+    Provider(
+        provider_id="NP002",
+        first_name="Jessica",
+        last_name="Rodriguez",
+        specialty="Orthopedic Surgery",
+        sub_specialty="Sports Medicine (NP)",
+        credentials="NP-C",
+        location="BSW Orthopedic & Spine Hospital - Arlington",
+        address="1301 Brown Blvd",
+        city="Arlington",
+        phone="817-468-9100",
+        accepting_new_patients=True,
+        languages=["English", "Spanish"],
+        insurance_accepted=["Blue Cross Blue Shield", "Aetna", "United Healthcare", "Medicare"],
+        availability_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        typical_slot_duration=20,
+        provider_type="NP",
+        supervising_physician="DR002"
+    ),
+    Provider(
+        provider_id="PA003",
+        first_name="Emily",
+        last_name="Carter",
+        specialty="Orthopedic Surgery",
+        sub_specialty="Joint Replacement (PA)",
+        credentials="PA-C",
+        location="BSW Medical Center - Plano",
+        address="4708 Alliance Blvd",
+        city="Plano",
+        phone="469-814-4000",
+        accepting_new_patients=True,
+        languages=["English"],
+        insurance_accepted=["Blue Cross Blue Shield", "United Healthcare", "Medicare"],
+        availability_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        typical_slot_duration=20,
+        provider_type="PA",
+        supervising_physician="DR003"
+    ),
+    Provider(
+        provider_id="PA004",
+        first_name="Thomas",
+        last_name="Green",
+        specialty="Orthopedic Surgery",
+        sub_specialty="Foot and Ankle (PA)",
+        credentials="PA-C",
+        location="BSW Medical Center - Temple",
+        address="2401 South 31st St",
+        city="Temple",
+        phone="254-724-2111",
+        accepting_new_patients=True,
+        languages=["English", "Spanish"],
+        insurance_accepted=["Blue Cross Blue Shield", "Aetna", "United Healthcare", "Medicare", "Medicaid"],
+        availability_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        typical_slot_duration=20,
+        provider_type="PA",
+        supervising_physician="DR004"
+    ),
+
     # Cardiologists
     Provider(
         provider_id="DR011",
@@ -447,7 +530,66 @@ PROVIDERS = [
         availability_days=["Monday", "Tuesday", "Thursday", "Friday"],
         typical_slot_duration=45
     ),
-    
+
+    # Cardiology PAs and NPs (Post-procedure follow-up providers)
+    Provider(
+        provider_id="NP011",
+        first_name="Lisa",
+        last_name="Wang",
+        specialty="Cardiology",
+        sub_specialty="Interventional Cardiology (NP)",
+        credentials="NP-C",
+        location="BSW Heart & Vascular Hospital - Dallas",
+        address="621 North Hall St",
+        city="Dallas",
+        phone="214-820-7500",
+        accepting_new_patients=True,
+        languages=["English", "Mandarin"],
+        insurance_accepted=["Blue Cross Blue Shield", "Aetna", "United Healthcare", "Medicare"],
+        availability_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        typical_slot_duration=30,
+        provider_type="NP",
+        supervising_physician="DR011"
+    ),
+    Provider(
+        provider_id="PA012",
+        first_name="David",
+        last_name="Brown",
+        specialty="Cardiology",
+        sub_specialty="Electrophysiology (PA)",
+        credentials="PA-C",
+        location="BSW Medical Center - Plano",
+        address="4708 Alliance Blvd",
+        city="Plano",
+        phone="469-814-4100",
+        accepting_new_patients=True,
+        languages=["English"],
+        insurance_accepted=["Blue Cross Blue Shield", "Aetna", "United Healthcare", "Medicare"],
+        availability_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        typical_slot_duration=30,
+        provider_type="PA",
+        supervising_physician="DR012"
+    ),
+    Provider(
+        provider_id="NP014",
+        first_name="Maria",
+        last_name="Santos",
+        specialty="Cardiology",
+        sub_specialty="General Cardiology (NP)",
+        credentials="NP-C",
+        location="BSW Medical Center - Round Rock",
+        address="300 University Blvd",
+        city="Round Rock",
+        phone="512-509-0100",
+        accepting_new_patients=True,
+        languages=["English", "Spanish", "Tagalog"],
+        insurance_accepted=["Blue Cross Blue Shield", "Aetna", "United Healthcare", "Medicare", "Medicaid"],
+        availability_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        typical_slot_duration=30,
+        provider_type="NP",
+        supervising_physician="DR014"
+    ),
+
     # Primary Care Physicians
     Provider(
         provider_id="DR006",
@@ -813,6 +955,34 @@ def get_clinical_protocol(condition: str) -> Optional[ClinicalProtocol]:
     return None
 
 
+# METROPOLITAN AREA GROUPINGS
+# Group nearby cities into metropolitan areas for convenient location matching
+METRO_AREAS = {
+    "Dallas-Fort Worth": ["Dallas", "Plano", "Arlington", "Frisco", "Irving", "Richardson"],
+    "Austin": ["Austin", "Round Rock", "Cedar Park", "Georgetown"],
+    "Central Texas": ["Temple", "Belton", "Killeen", "Waco"],
+    "Houston": ["Houston", "The Woodlands", "Katy", "Sugar Land"],
+    "San Antonio": ["San Antonio", "New Braunfels", "Schertz"]
+}
+
+def get_metro_area(city: str) -> Optional[str]:
+    """Get the metropolitan area name for a given city."""
+    city_lower = city.lower()
+    for metro, cities in METRO_AREAS.items():
+        if any(c.lower() == city_lower for c in cities):
+            return metro
+    return None
+
+def get_metro_cities(city: str) -> List[str]:
+    """
+    Get all cities in the same metropolitan area as the given city.
+    Returns just the given city if not part of a metro area.
+    """
+    metro = get_metro_area(city)
+    if metro:
+        return METRO_AREAS[metro]
+    return [city]
+
 def get_patient_status_for_provider(patient: Patient, provider_id: str) -> str:
     """
     Determine patient status for a specific provider.
@@ -831,9 +1001,10 @@ def get_patient_status_for_provider(patient: Patient, provider_id: str) -> str:
 
 
 # Generate all appointment slots for all providers
+# Generate 60 days ahead to support 6+ week searches recommended in agent prompts
 ALL_APPOINTMENT_SLOTS = []
 for provider in PROVIDERS:
-    ALL_APPOINTMENT_SLOTS.extend(generate_appointment_slots(provider, days_ahead=14))
+    ALL_APPOINTMENT_SLOTS.extend(generate_appointment_slots(provider, days_ahead=60))
 
 
 if __name__ == "__main__":

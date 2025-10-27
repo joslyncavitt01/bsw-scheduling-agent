@@ -10,6 +10,7 @@ from mock_data import (
     PROVIDERS, PATIENTS, ALL_APPOINTMENT_SLOTS, INSURANCE_POLICIES, CLINICAL_PROTOCOLS,
     get_provider_by_id, get_patient_by_id, get_providers_by_specialty,
     get_insurance_policy, get_clinical_protocol as get_clinical_protocol_data,
+    get_metro_area, get_metro_cities,
     Provider, Patient, AppointmentSlot
 )
 
@@ -125,9 +126,21 @@ def search_appointment_slots(
             available_slots = [s for s in available_slots if s.date <= end_date]
 
         if location:
+            # Use metropolitan area matching for more flexible location filtering
+            # First try exact city match, then try metro area match
+            metro_cities = get_metro_cities(location)
+
+            # Get providers in the location's metro area
+            location_provider_ids = []
+            for provider in PROVIDERS:
+                # Check if provider's city matches any city in the metro area
+                if any(city.lower() == provider.city.lower() for city in metro_cities):
+                    location_provider_ids.append(provider.provider_id)
+
+            # Also support substring matching on location name (e.g., "Dallas" matches "BSW Medical Center - Dallas")
             available_slots = [
                 s for s in available_slots
-                if location.lower() in s.location.lower()
+                if (s.provider_id in location_provider_ids or location.lower() in s.location.lower())
             ]
 
         if appointment_type:
@@ -561,7 +574,10 @@ def get_patient_info(patient_id: str) -> Dict[str, Any]:
                 "gender": patient.gender,
                 "phone": patient.phone,
                 "email": patient.email,
-                "address": f"{patient.address}, {patient.city}, {patient.state} {patient.zip_code}"
+                "address": f"{patient.address}, {patient.city}, {patient.state} {patient.zip_code}",
+                "city": patient.city,
+                "state": patient.state,
+                "zip_code": patient.zip_code
             },
             "insurance": {
                 "provider": patient.insurance_provider,
@@ -719,13 +735,76 @@ def _get_scheduling_priority(urgency_level: str) -> str:
     return urgency_map.get(urgency_level.lower(), "NORMAL")
 
 
+def get_provider_team(physician_id: str) -> Dict[str, Any]:
+    """
+    Get all PAs/NPs who work under a specific physician's supervision.
+    Useful for finding post-operative follow-up providers when surgeon unavailable.
+
+    Args:
+        physician_id: The physician's provider ID (e.g., 'DR003')
+
+    Returns:
+        Dictionary containing team member details
+    """
+    try:
+        # Verify physician exists
+        physician = get_provider_by_id(physician_id)
+        if not physician:
+            return {
+                "success": False,
+                "error": f"Physician with ID '{physician_id}' not found",
+                "physician_id": physician_id
+            }
+
+        # Find all PAs/NPs supervised by this physician
+        team_members = [
+            p for p in PROVIDERS
+            if p.supervising_physician == physician_id
+        ]
+
+        # Format team member details
+        team_list = []
+        for member in team_members:
+            team_list.append({
+                "provider_id": member.provider_id,
+                "name": f"{member.first_name} {member.last_name}",
+                "credentials": member.credentials,
+                "provider_type": member.provider_type,
+                "specialty": member.specialty,
+                "sub_specialty": member.sub_specialty,
+                "location": member.location,
+                "city": member.city,
+                "phone": member.phone,
+                "availability_days": member.availability_days,
+                "typical_slot_duration": member.typical_slot_duration
+            })
+
+        return {
+            "success": True,
+            "physician_id": physician_id,
+            "physician_name": f"Dr. {physician.first_name} {physician.last_name}",
+            "physician_specialty": physician.specialty,
+            "team_size": len(team_members),
+            "team_members": team_list,
+            "message": f"Dr. {physician.last_name} has {len(team_members)} team member(s)" if team_members else f"Dr. {physician.last_name} has no PA/NP team members on file"
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Error getting provider team: {str(e)}",
+            "physician_id": physician_id
+        }
+
+
 def find_nearest_providers(
     patient_city: str,
     specialty: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Find providers nearest to the patient's location.
-    Simple city-based matching - exact match first, then all available locations.
+    Uses metropolitan area grouping - finds providers in patient's city AND nearby metro cities.
+    For example, a patient in Dallas will see providers in Dallas, Plano, Arlington, Frisco, etc.
 
     Args:
         patient_city: The city where the patient lives
@@ -744,12 +823,24 @@ def find_nearest_providers(
         # Find providers in the same city as patient
         same_city_providers = [p for p in providers if p.city.lower() == patient_city.lower()]
 
+        # Get metropolitan area cities (includes patient's city + nearby cities)
+        metro_cities = get_metro_cities(patient_city)
+        metro_area_name = get_metro_area(patient_city)
+
+        # Find providers in the same metropolitan area
+        metro_providers = [
+            p for p in providers
+            if any(city.lower() == p.city.lower() for city in metro_cities)
+        ]
+
         # Get all unique cities where providers are located
         all_cities = sorted(list(set(p.city for p in providers)))
 
-        # Format results
+        # Format results - prioritize same city, then metro area
         nearest_providers = []
-        for provider in same_city_providers[:5]:  # Limit to 5
+
+        # Add same-city providers first
+        for provider in same_city_providers[:3]:  # Up to 3 same-city providers
             nearest_providers.append({
                 "provider_id": provider.provider_id,
                 "name": f"Dr. {provider.first_name} {provider.last_name}",
@@ -758,16 +849,46 @@ def find_nearest_providers(
                 "location": provider.location,
                 "city": provider.city,
                 "phone": provider.phone,
-                "accepting_new_patients": provider.accepting_new_patients
+                "accepting_new_patients": provider.accepting_new_patients,
+                "distance_category": "same_city"
             })
+
+        # Add metro area providers (different city, but nearby)
+        for provider in metro_providers:
+            if provider.city.lower() != patient_city.lower() and len(nearest_providers) < 5:
+                nearest_providers.append({
+                    "provider_id": provider.provider_id,
+                    "name": f"Dr. {provider.first_name} {provider.last_name}",
+                    "specialty": provider.specialty,
+                    "sub_specialty": provider.sub_specialty,
+                    "location": provider.location,
+                    "city": provider.city,
+                    "phone": provider.phone,
+                    "accepting_new_patients": provider.accepting_new_patients,
+                    "distance_category": "metro_area"
+                })
+
+        # Build message
+        if same_city_providers:
+            message = f"Found {len(same_city_providers)} providers in {patient_city}"
+            if metro_area_name and len(metro_providers) > len(same_city_providers):
+                other_metro_providers = len(metro_providers) - len(same_city_providers)
+                message += f", plus {other_metro_providers} more in the {metro_area_name} area"
+        elif metro_providers:
+            message = f"No providers in {patient_city}, but found {len(metro_providers)} in the {metro_area_name} area"
+        else:
+            message = f"No providers found in {patient_city}. Available in: {', '.join(all_cities)}"
 
         return {
             "success": True,
             "patient_city": patient_city,
+            "metro_area": metro_area_name,
+            "metro_cities": metro_cities if metro_area_name else [patient_city],
             "providers_in_patient_city": len(same_city_providers),
+            "providers_in_metro_area": len(metro_providers),
             "nearest_providers": nearest_providers,
             "all_available_cities": all_cities,
-            "message": f"Found {len(same_city_providers)} providers in {patient_city}" if same_city_providers else f"No providers found in {patient_city}. Available in: {', '.join(all_cities)}"
+            "message": message
         }
 
     except Exception as e:
@@ -989,6 +1110,24 @@ TOOLS_DEFINITIONS = [
                 "additionalProperties": False
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_provider_team",
+            "description": "Get all Physician Assistants (PAs) and Nurse Practitioners (NPs) who work under a specific physician's supervision. Essential for post-operative follow-up scheduling when the operating surgeon is unavailable. Team members can handle routine follow-ups (wound checks, suture removal, post-op assessments) under physician supervision.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "physician_id": {
+                        "type": "string",
+                        "description": "The physician's provider ID (e.g., 'DR003', 'DR001'). This is the supervising physician whose team you want to find."
+                    }
+                },
+                "required": ["physician_id"],
+                "additionalProperties": False
+            }
+        }
     }
 ]
 
@@ -1017,6 +1156,7 @@ def execute_tool(tool_name: str, tool_arguments: Dict[str, Any]) -> Dict[str, An
         "get_patient_info": get_patient_info,
         "get_clinical_protocol": get_clinical_protocol,
         "find_nearest_providers": find_nearest_providers,
+        "get_provider_team": get_provider_team,
     }
 
     if tool_name not in tool_map:

@@ -313,7 +313,27 @@ APPOINTMENT BOOKING GUIDELINES:
 - Post-op appointments are HIGH PRIORITY - schedule within requested timeframe
 - 2-week follow-up should be scheduled before hospital discharge
 - Patient should bring physical therapy notes to appointments
-- Same surgeon who performed procedure should see patient for follow-ups
+
+POST-OPERATIVE FOLLOW-UP PROVIDER HIERARCHY:
+1. PREFERRED: Original operating surgeon (continuity of care, intimate knowledge of procedure)
+2. IF SURGEON UNAVAILABLE: Surgeon's Physician Assistant (PA) or Nurse Practitioner (NP) from same team
+   - PAs/NPs commonly handle routine post-op visits: wound checks, suture removal, PT progress review
+   - Team members have direct access to surgical notes and work under surgeon's supervision
+3. IF TEAM UNAVAILABLE: Same-practice partner surgeon with same sub-specialty
+4. NEVER: Random surgeon from different practice for routine post-op follow-ups
+
+RATIONALE FOR TEAM-BASED POST-OP CARE:
+- Operating surgeon has most detailed knowledge of procedure performed
+- PA/NP team members provide continuity when surgeon unavailable (vacation, surgery schedule)
+- 2-week wound checks often handled by PAs/NPs to allow surgeons to focus on complex cases
+- Team-based care is standard in modern surgical practices and improves access
+- Patient outcomes equivalent for routine follow-ups with trained PA/NP vs surgeon
+
+TYPICAL POST-OP VISIT PROVIDERS BY TIMEPOINT:
+- 2-week follow-up: Surgeon's PA/NP common (wound check, suture/staple removal, ROM assessment)
+- 6-week follow-up: Surgeon or PA/NP (X-ray review, PT progress, weight-bearing clearance)
+- 3-month follow-up: Surgeon preferred (functional assessment, return to activities)
+- Annual follow-up: Surgeon or PA/NP (routine surveillance, imaging review)
 
 RED FLAGS requiring urgent appointment:
 - Increasing pain, swelling, or drainage from incision
