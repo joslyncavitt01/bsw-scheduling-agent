@@ -158,6 +158,14 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# Example data warning
+st.warning("""
+**Example Data Displayed**
+
+The metrics shown below are example data for demonstration purposes only.
+Real metrics will be collected from actual chat sessions once the system is deployed in production.
+""")
+
 # Time filter selector
 st.markdown("### Time Range")
 col1, col2, col3, col4, col5, col6 = st.columns([1, 1, 1, 1, 1, 2])

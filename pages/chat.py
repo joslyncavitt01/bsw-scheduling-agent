@@ -352,6 +352,8 @@ if prompt := st.chat_input("Type your message here..."):
 
             if routing_result.get("success") and routing_result["agent"] != "unclear":
                 st.session_state.current_agent = routing_result["agent"]
+    else:
+        # Already with a specialist - no routing needed, proceed directly to agent
 
     # Call appropriate agent
     current_agent = st.session_state.current_agent
