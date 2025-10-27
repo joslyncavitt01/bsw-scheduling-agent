@@ -252,7 +252,7 @@ with st.sidebar:
 # Main content
 st.markdown("""
 <div class="main-header">
-    <h1>< Baylor Scott & White Health</h1>
+    <h1>Baylor Scott & White Health</h1>
     <p>AI-Powered Appointment Scheduling Assistant</p>
 </div>
 """, unsafe_allow_html=True)
