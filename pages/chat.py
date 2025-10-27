@@ -23,6 +23,7 @@ try:
     from mock_data import PATIENTS, get_patient_by_id
     from openai import OpenAI
     from prompts import (
+        ROUTER_AGENT_PROMPT,
         ORTHOPEDIC_AGENT_PROMPT,
         CARDIOLOGY_AGENT_PROMPT,
         PRIMARY_CARE_AGENT_PROMPT
@@ -80,6 +81,7 @@ st.session_state.selected_patient = st.session_state.logged_in_patient
 def get_agent_prompt(agent_name: str) -> str:
     """Get the system prompt for a specific agent."""
     agent_prompts = {
+        "router": ROUTER_AGENT_PROMPT,
         "orthopedic": ORTHOPEDIC_AGENT_PROMPT,
         "cardiology": CARDIOLOGY_AGENT_PROMPT,
         "primary_care": PRIMARY_CARE_AGENT_PROMPT
@@ -346,19 +348,32 @@ if prompt := st.chat_input("Type your message here..."):
         st.markdown(prompt)
 
     # Determine routing (if on router agent)
+    # On FIRST message, router handles identity verification
+    # On subsequent messages, router routes to specialty agent
     if st.session_state.current_agent == "router":
-        with st.spinner("Routing to appropriate specialist..."):
-            routing_result = route_patient(
-                enhanced_prompt,
-                conversation_history=st.session_state.messages[-5:]
-            )
+        # Check if this is the first user message (only system message before)
+        user_messages = [m for m in st.session_state.messages if m["role"] == "user"]
 
-            if routing_result.get("success") and routing_result["agent"] != "unclear":
-                st.session_state.current_agent = routing_result["agent"]
-    # If already with a specialist - no routing needed, proceed directly to agent
+        if len(user_messages) <= 1:
+            # First message - router will handle identity verification
+            # Don't route yet, let router agent respond
+            current_agent = "router"
+        else:
+            # Subsequent messages - route to specialty agent
+            with st.spinner("Routing to appropriate specialist..."):
+                routing_result = route_patient(
+                    enhanced_prompt,
+                    conversation_history=st.session_state.messages[-5:]
+                )
 
-    # Call appropriate agent
-    current_agent = st.session_state.current_agent
+                if routing_result.get("success") and routing_result["agent"] != "unclear":
+                    st.session_state.current_agent = routing_result["agent"]
+                    current_agent = routing_result["agent"]
+                else:
+                    current_agent = "router"
+    else:
+        # Already with a specialist - no routing needed
+        current_agent = st.session_state.current_agent
 
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
