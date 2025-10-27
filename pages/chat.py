@@ -301,19 +301,11 @@ for message in st.session_state.messages:
     content = message["content"]
 
     if role == "user":
-        with st.chat_message("user", avatar=""):
+        with st.chat_message("user"):
             st.markdown(content)
 
     elif role == "assistant":
-        agent = message.get("agent", "assistant")
-        avatar = {
-            "router": "",
-            "orthopedic": "🦴",
-            "cardiology": "",
-            "primary_care": ""
-        }.get(agent, "🤖")
-
-        with st.chat_message("assistant", avatar=avatar):
+        with st.chat_message("assistant"):
             st.markdown(content)
 
             # Show tool usage if any
@@ -343,7 +335,7 @@ if prompt := st.chat_input("Type your message here..."):
     })
 
     # Display user message
-    with st.chat_message("user", avatar=""):
+    with st.chat_message("user"):
         st.markdown(prompt)
 
     # Determine routing (if on router agent)
@@ -360,14 +352,8 @@ if prompt := st.chat_input("Type your message here..."):
 
     # Call appropriate agent
     current_agent = st.session_state.current_agent
-    agent_avatar = {
-        "router": "",
-        "orthopedic": "🦴",
-        "cardiology": "",
-        "primary_care": ""
-    }.get(current_agent, "🤖")
 
-    with st.chat_message("assistant", avatar=agent_avatar):
+    with st.chat_message("assistant"):
         message_placeholder = st.empty()
 
         with st.spinner(f"{format_agent_name(current_agent)} is thinking..."):
