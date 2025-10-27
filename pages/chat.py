@@ -298,7 +298,8 @@ st.markdown("### Conversation")
 # Display chat messages
 for message in st.session_state.messages:
     role = message["role"]
-    content = message["content"]
+    # Use display_content if available (for user messages with patient context)
+    content = message.get("display_content", message["content"])
 
     if role == "user":
         with st.chat_message("user"):
@@ -325,12 +326,14 @@ if prompt := st.chat_input("Type your message here..."):
     enhanced_prompt = prompt
     if st.session_state.selected_patient:
         patient = st.session_state.selected_patient
-        enhanced_prompt = f"[Patient: {patient.first_name} {patient.last_name}, ID: {patient.patient_id}] {prompt}"
+        # Add patient context to the message that will be sent to the agent
+        enhanced_prompt = f"[Patient: {patient.first_name} {patient.last_name}, ID: {patient.patient_id}, DOB: {patient.date_of_birth}] {prompt}"
 
-    # Add user message
+    # Add user message (store original prompt for display, but use enhanced_prompt for agent)
     st.session_state.messages.append({
         "role": "user",
-        "content": prompt,
+        "content": enhanced_prompt,  # Changed from prompt to enhanced_prompt
+        "display_content": prompt,  # Store original for display purposes
         "timestamp": time.time()
     })
 

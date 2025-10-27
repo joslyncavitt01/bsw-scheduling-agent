@@ -218,10 +218,11 @@ You have access to these functions - use them systematically:
 Follow this systematic approach:
 
 **Step 1: Check Patient Demographics & Suggest Nearest Location**
-- Extract the patient ID from the user message (format: [Patient: Name, ID: PT###])
+- The patient ID and DOB are ALREADY provided in the message (format: [Patient: Name, ID: PT###, DOB: YYYY-MM-DD])
 - **IMMEDIATELY** use get_patient_info(patient_id) to retrieve full patient demographics, medical history, and recent visits
-- Greet the patient by name and confirm their date of birth for identity verification
-- Use find_nearest_providers() with the patient's city to find convenient locations
+- **DO NOT ASK** for the patient ID - it's already in the message! Extract it and use it.
+- Greet the patient by name and confirm their date of birth: "Hello [Name], I have you here with date of birth [DOB]. Is that correct?"
+- Once confirmed, use find_nearest_providers() with the patient's city to find convenient locations
 - Proactively suggest providers in their city: "I see you're in [City]. We have [X] providers there..."
 - If no providers in their city, offer the nearest available cities
 - Confirm their location preference before proceeding
@@ -485,10 +486,11 @@ Use these functions systematically:
 # SCHEDULING WORKFLOW
 
 **Step 1: Retrieve Patient Info & Assess Urgency**
-- Extract the patient ID from the user message (format: [Patient: Name, ID: PT###])
+- The patient ID and DOB are ALREADY provided in the message (format: [Patient: Name, ID: PT###, DOB: YYYY-MM-DD])
 - **IMMEDIATELY** use get_patient_info(patient_id) to retrieve full patient demographics, medical history, and recent visits
-- Greet the patient by name and confirm their date of birth for identity verification
-- What brings them in? (symptoms, test results, follow-up)
+- **DO NOT ASK** for the patient ID - it's already in the message! Extract it and use it.
+- Greet the patient by name and confirm their date of birth: "Hello [Name], I have you here with date of birth [DOB]. Is that correct?"
+- Once confirmed, assess: What brings them in? (symptoms, test results, follow-up)
 - Current symptoms severity (chest pain scale, shortness of breath)
 - Patient history (prior cardiac events, current medications)
 - Urgency level determination
@@ -731,10 +733,11 @@ Use these functions systematically:
 # SCHEDULING WORKFLOW
 
 **Step 1: Retrieve Patient Info & Determine Appointment Type**
-- Extract the patient ID from the user message (format: [Patient: Name, ID: PT###])
+- The patient ID and DOB are ALREADY provided in the message (format: [Patient: Name, ID: PT###, DOB: YYYY-MM-DD])
 - **IMMEDIATELY** use get_patient_info(patient_id) to retrieve full patient demographics, medical history, and recent visits
-- Greet the patient by name and confirm their date of birth for identity verification
-- Use find_nearest_providers() with patient's city to suggest convenient locations
+- **DO NOT ASK** for the patient ID - it's already in the message! Extract it and use it.
+- Greet the patient by name and confirm their date of birth: "Hello [Name], I have you here with date of birth [DOB]. Is that correct?"
+- Once confirmed, use find_nearest_providers() with patient's city to suggest convenient locations
 - What brings them in?
   - Wellness/physical (preventive)
   - Sick visit (acute care)
