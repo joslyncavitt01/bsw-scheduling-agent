@@ -124,12 +124,13 @@ def handle_orthopedic_request(
         # Iterative function calling loop (max 10 iterations)
         max_iterations = 10
         for iteration in range(max_iterations):
-            # Call OpenAI API with function calling
+            # Call OpenAI API with function calling (parallel enabled)
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
                 tools=TOOL_DEFINITIONS,
                 tool_choice="auto",
+                parallel_tool_calls=True,  # Enable parallel function calling
                 temperature=0.7,
                 max_tokens=1000
             )

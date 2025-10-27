@@ -117,8 +117,9 @@ def call_agent(messages: List[Dict], agent_name: str, use_tools: bool = True) ->
                 model="gpt-4o-mini",
                 messages=full_messages,
                 tools=TOOLS_DEFINITIONS,
-                temperature=0.7,
-                max_tokens=1000
+                parallel_tool_calls=True,  # Enable parallel function calling
+                temperature=0.3,  # Reduced from 0.7 for less hallucination, more faithful to tool results
+                max_tokens=1500  # Increased from 1000 to allow proper slot tracking
             )
         else:
             response = client.chat.completions.create(
@@ -132,6 +133,7 @@ def call_agent(messages: List[Dict], agent_name: str, use_tools: bool = True) ->
 
         # Extract tool calls if any
         tool_calls = []
+        raw_tool_calls = []
         if hasattr(message, 'tool_calls') and message.tool_calls:
             for tool_call in message.tool_calls:
                 tool_calls.append({
@@ -139,10 +141,20 @@ def call_agent(messages: List[Dict], agent_name: str, use_tools: bool = True) ->
                     "name": tool_call.function.name,
                     "arguments": tool_call.function.arguments
                 })
+                # Also store raw tool calls for proper message formatting
+                raw_tool_calls.append({
+                    "id": tool_call.id,
+                    "type": "function",
+                    "function": {
+                        "name": tool_call.function.name,
+                        "arguments": tool_call.function.arguments
+                    }
+                })
 
         return {
             "content": message.content or "",
-            "tool_calls": tool_calls
+            "tool_calls": tool_calls,
+            "raw_tool_calls": raw_tool_calls  # For proper OpenAI message formatting
         }
 
     except Exception as e:
@@ -379,51 +391,72 @@ if prompt := st.chat_input("Type your message here..."):
         message_placeholder = st.empty()
 
         with st.spinner(f"{format_agent_name(current_agent)} is thinking..."):
-            # Call agent
-            response = call_agent(
-                st.session_state.messages,
-                current_agent,
-                use_tools=True
-            )
-
-            response_content = response["content"]
-            tool_calls = response["tool_calls"]
-
-            # Execute tools if needed
+            # Iterative function calling loop (max 10 iterations)
+            # This allows the agent to chain multiple tool calls autonomously
+            max_iterations = 10
             tools_used_in_turn = []
-            if tool_calls:
-                with st.spinner("Using tools..."):
-                    tool_results = execute_tool_calls(tool_calls)
-                    tools_used_in_turn = [t["tool_name"] for t in tool_results]
+            conversation_messages = st.session_state.messages.copy()
 
-                    # Format tool results for context
-                    tool_context = "\n\n".join([
-                        f"Tool: {r['tool_name']}\nResult: {r['result']}"
-                        for r in tool_results
-                    ])
+            for iteration in range(max_iterations):
+                # Call agent
+                response = call_agent(
+                    conversation_messages,
+                    current_agent,
+                    use_tools=True
+                )
 
-                    # Get follow-up response with tool results
-                    followup_messages = st.session_state.messages + [
-                        {"role": "assistant", "content": response_content or ""},
-                        {"role": "system", "content": f"Tool Results:\n{tool_context}"}
-                    ]
+                response_content = response["content"]
+                tool_calls = response["tool_calls"]
+                raw_tool_calls = response.get("raw_tool_calls", [])
 
-                    followup_response = call_agent(
-                        followup_messages,
-                        current_agent,
-                        use_tools=False
-                    )
+                # If no tool calls, we're done - display final response
+                if not tool_calls:
+                    break
 
-                    response_content = followup_response["content"]
+                # Execute tools and add results to conversation
+                import json
 
-            # Display response
+                # Add assistant message with tool calls to conversation
+                # IMPORTANT: Must include tool_calls in the message for OpenAI API
+                assistant_msg = {
+                    "role": "assistant",
+                    "content": response_content or "",
+                    "tool_calls": raw_tool_calls  # Include raw tool calls
+                }
+                conversation_messages.append(assistant_msg)
+
+                # Execute each tool call
+                for tool_call in tool_calls:
+                    tool_name = tool_call["name"]
+
+                    # Parse arguments
+                    try:
+                        arguments = json.loads(tool_call["arguments"])
+                    except:
+                        arguments = {}
+
+                    # Execute tool
+                    result = execute_tool(tool_name, arguments)
+                    tools_used_in_turn.append(tool_name)
+
+                    # Add tool result to conversation as "tool" role message
+                    # (OpenAI expects tool results in this format)
+                    conversation_messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call["id"],
+                        "name": tool_name,
+                        "content": json.dumps(result)
+                    })
+
+            # Display final response
             message_placeholder.markdown(response_content)
 
             # Show tools used
             if tools_used_in_turn:
                 with st.expander(" Tools Used"):
-                    for tool in tools_used_in_turn:
-                        st.code(tool, language="text")
+                    for tool in set(tools_used_in_turn):  # Use set to show unique tools
+                        count = tools_used_in_turn.count(tool)
+                        st.code(f"{tool} ({count}x)" if count > 1 else tool, language="text")
 
         # Add assistant message to history
         st.session_state.messages.append({

@@ -359,7 +359,7 @@ PROVIDERS = [
         address="4708 Alliance Blvd",
         city="Plano",
         phone="469-814-4000",
-        accepting_new_patients=False,
+        accepting_new_patients=True,  # Changed to True - existing patients can schedule post-op follow-ups
         languages=["English", "Spanish"],
         insurance_accepted=["Blue Cross Blue Shield", "United Healthcare", "Medicare"],
         availability_days=["Tuesday", "Wednesday", "Thursday"],
@@ -873,7 +873,10 @@ def generate_appointment_slots(provider: Provider, days_ahead: int = 30) -> List
         ["New Patient", "Follow-up"]  # Default fallback
     )
 
-    today = datetime.now()
+    # Fixed demo date to align with patient data
+    # This ensures consistent, realistic demo scenarios regardless of actual system date
+    # Patient visits range from July-October 2024, so demo date is October 27, 2024
+    today = datetime(2024, 10, 27)
     for day_offset in range(1, days_ahead + 1):
         date = today + timedelta(days=day_offset)
         day_name = date.strftime("%A")

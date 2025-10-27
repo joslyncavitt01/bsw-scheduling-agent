@@ -140,12 +140,13 @@ def handle_cardiology_request(
         # Iterative function calling loop (max 10 iterations)
         max_iterations = 10
         for iteration in range(max_iterations):
-            # Call OpenAI API with function calling
+            # Call OpenAI API with function calling (parallel enabled)
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
                 tools=TOOL_DEFINITIONS,
                 tool_choice="auto",
+                parallel_tool_calls=True,  # Enable parallel function calling
                 temperature=0.7,
                 max_tokens=1000
             )
@@ -164,7 +165,7 @@ def handle_cardiology_request(
 
                 # If emergency detected, prepend warning
                 if urgency_level == "emergent" and "911" not in final_response and "emergency" not in final_response.lower():
-                    final_response = "=¨ IMPORTANT: If you are experiencing severe chest pain or cardiac symptoms, please call 911 or go to the nearest emergency room immediately. Do not wait for an appointment.\n\n" + final_response
+                    final_response = "=ï¿½ IMPORTANT: If you are experiencing severe chest pain or cardiac symptoms, please call 911 or go to the nearest emergency room immediately. Do not wait for an appointment.\n\n" + final_response
 
                 result = {
                     "success": True,
