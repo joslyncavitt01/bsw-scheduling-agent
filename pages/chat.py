@@ -207,10 +207,14 @@ with st.sidebar:
     st.markdown("#### Logged in as:")
     st.success(f"**{patient.first_name} {patient.last_name}**")
 
-    with st.expander("Patient Details", expanded=False):
+    # Quick reference for demo - show DOB prominently for identity verification
+    st.info(f"**Your DOB**: {patient.date_of_birth}")
+    st.caption("(You'll need this for identity verification)")
+
+    with st.expander("Full Patient Details", expanded=False):
         st.markdown(f"""
         **ID**: {patient.patient_id}
-        **DOB**: {patient.date_of_birth}
+        **Date of Birth**: {patient.date_of_birth}
         **Age**: {patient.age}
         **Location**: {patient.city}, {patient.state} {patient.zip_code}
         **Address**: {patient.address}
@@ -326,8 +330,8 @@ if prompt := st.chat_input("Type your message here..."):
     enhanced_prompt = prompt
     if st.session_state.selected_patient:
         patient = st.session_state.selected_patient
-        # Add patient context to the message that will be sent to the agent
-        enhanced_prompt = f"[Patient: {patient.first_name} {patient.last_name}, ID: {patient.patient_id}, DOB: {patient.date_of_birth}] {prompt}"
+        # Add patient context to the message (patient will provide name and DOB for verification)
+        enhanced_prompt = f"[System: Patient ID {patient.patient_id} is logged in] {prompt}"
 
     # Add user message (store original prompt for display, but use enhanced_prompt for agent)
     st.session_state.messages.append({
