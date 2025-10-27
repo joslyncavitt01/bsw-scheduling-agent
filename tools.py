@@ -719,6 +719,65 @@ def _get_scheduling_priority(urgency_level: str) -> str:
     return urgency_map.get(urgency_level.lower(), "NORMAL")
 
 
+def find_nearest_providers(
+    patient_city: str,
+    specialty: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Find providers nearest to the patient's location.
+    Simple city-based matching - exact match first, then all available locations.
+
+    Args:
+        patient_city: The city where the patient lives
+        specialty: Optional specialty filter
+
+    Returns:
+        Dictionary containing nearest providers and available locations
+    """
+    try:
+        # Get all providers (optionally filtered by specialty)
+        if specialty:
+            providers = get_providers_by_specialty(specialty)
+        else:
+            providers = PROVIDERS
+
+        # Find providers in the same city as patient
+        same_city_providers = [p for p in providers if p.city.lower() == patient_city.lower()]
+
+        # Get all unique cities where providers are located
+        all_cities = sorted(list(set(p.city for p in providers)))
+
+        # Format results
+        nearest_providers = []
+        for provider in same_city_providers[:5]:  # Limit to 5
+            nearest_providers.append({
+                "provider_id": provider.provider_id,
+                "name": f"Dr. {provider.first_name} {provider.last_name}",
+                "specialty": provider.specialty,
+                "sub_specialty": provider.sub_specialty,
+                "location": provider.location,
+                "city": provider.city,
+                "phone": provider.phone,
+                "accepting_new_patients": provider.accepting_new_patients
+            })
+
+        return {
+            "success": True,
+            "patient_city": patient_city,
+            "providers_in_patient_city": len(same_city_providers),
+            "nearest_providers": nearest_providers,
+            "all_available_cities": all_cities,
+            "message": f"Found {len(same_city_providers)} providers in {patient_city}" if same_city_providers else f"No providers found in {patient_city}. Available in: {', '.join(all_cities)}"
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Error finding nearest providers: {str(e)}",
+            "patient_city": patient_city
+        }
+
+
 # ============================================================================
 # OPENAI FUNCTION CALLING DEFINITIONS
 # ============================================================================
@@ -907,6 +966,29 @@ TOOLS_DEFINITIONS = [
                 "additionalProperties": False
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "find_nearest_providers",
+            "description": "Find healthcare providers nearest to the patient's location. Use this at the start of scheduling conversations to suggest the most convenient location for the patient. Returns providers in the patient's city first, then lists all available cities if none found locally.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "patient_city": {
+                        "type": "string",
+                        "description": "The city where the patient lives (e.g., 'Dallas', 'Plano', 'Austin')"
+                    },
+                    "specialty": {
+                        "type": "string",
+                        "description": "Optional: Filter by medical specialty (e.g., 'Orthopedic Surgery', 'Cardiology', 'Primary Care')",
+                        "enum": ["Orthopedic Surgery", "Cardiology", "Primary Care"]
+                    }
+                },
+                "required": ["patient_city"],
+                "additionalProperties": False
+            }
+        }
     }
 ]
 
@@ -934,6 +1016,7 @@ def execute_tool(tool_name: str, tool_arguments: Dict[str, Any]) -> Dict[str, An
         "check_referral_status": check_referral_status,
         "get_patient_info": get_patient_info,
         "get_clinical_protocol": get_clinical_protocol,
+        "find_nearest_providers": find_nearest_providers,
     }
 
     if tool_name not in tool_map:

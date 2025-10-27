@@ -49,6 +49,17 @@ def get_openai_client():
 
 client = get_openai_client()
 
+# Check if patient is logged in
+if "logged_in_patient" not in st.session_state or st.session_state.logged_in_patient is None:
+    st.warning("Please login first to access the scheduling assistant.")
+    st.markdown("### Patient Login Required")
+    st.info("You need to select a patient profile before you can schedule appointments.")
+
+    if st.button("Go to Login Page", type="primary"):
+        st.switch_page("pages/login.py")
+
+    st.stop()
+
 # Initialize session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -59,11 +70,11 @@ if "current_agent" not in st.session_state:
 if "tools_used" not in st.session_state:
     st.session_state.tools_used = []
 
-if "selected_patient" not in st.session_state:
-    st.session_state.selected_patient = None
-
 if "conversation_start_time" not in st.session_state:
     st.session_state.conversation_start_time = None
+
+# Set the selected patient from logged-in patient
+st.session_state.selected_patient = st.session_state.logged_in_patient
 
 # Helper functions
 def get_agent_prompt(agent_name: str) -> str:
@@ -191,34 +202,27 @@ st.markdown("""
 with st.sidebar:
     st.markdown("### Current Session")
 
-    # Patient selector
-    st.markdown("#### Select Demo Patient")
-    patient_options = ["None"] + [f"{p.patient_id} - {p.first_name} {p.last_name}" for p in PATIENTS]
-    selected = st.selectbox(
-        "Quick select patient",
-        options=patient_options,
-        index=0,
-        help="Select a demo patient to auto-populate their information"
-    )
+    # Display logged-in patient info
+    patient = st.session_state.logged_in_patient
+    st.markdown("#### Logged in as:")
+    st.success(f"**{patient.first_name} {patient.last_name}**")
 
-    if selected != "None":
-        patient_id = selected.split(" - ")[0]
-        patient = get_patient_by_id(patient_id)
-        if patient:
-            st.session_state.selected_patient = patient
-            st.success(f"Selected: {patient.first_name} {patient.last_name}")
+    with st.expander("Patient Details", expanded=False):
+        st.markdown(f"""
+        **ID**: {patient.patient_id}
+        **DOB**: {patient.date_of_birth}
+        **Age**: {patient.age}
+        **Location**: {patient.city}, {patient.state} {patient.zip_code}
+        **Address**: {patient.address}
+        **Insurance**: {patient.insurance_provider}
+        **Conditions**: {', '.join(patient.medical_conditions) if patient.medical_conditions else 'None'}
+        """)
 
-            with st.expander("Patient Details"):
-                st.markdown(f"""
-                **ID**: {patient.patient_id}
-                **Age**: {patient.age}
-                **Location**: {patient.city}, {patient.state} {patient.zip_code}
-                **Address**: {patient.address}
-                **Insurance**: {patient.insurance_provider}
-                **Conditions**: {', '.join(patient.medical_conditions) if patient.medical_conditions else 'None'}
-                """)
-    else:
-        st.session_state.selected_patient = None
+    if st.button("Logout", use_container_width=True):
+        st.session_state.logged_in_patient = None
+        st.session_state.messages = []
+        st.session_state.current_agent = "router"
+        st.switch_page("pages/login.py")
 
     st.markdown("---")
 

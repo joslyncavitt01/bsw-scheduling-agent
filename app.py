@@ -196,6 +196,7 @@ with st.sidebar:
     st.markdown("### Navigation")
     st.markdown("""
     - **Home** - Welcome and overview
+    - **Login** - Select demo patient
     - **Chat** - Schedule appointments
     - **Metrics Dashboard** - View analytics
     - **Feedback** - Rate conversations
@@ -425,7 +426,11 @@ col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     if st.button("= Start Chatting", use_container_width=True):
-        st.switch_page("pages/chat.py")
+        # Check if patient is logged in, if not go to login page
+        if "logged_in_patient" not in st.session_state or st.session_state.logged_in_patient is None:
+            st.switch_page("pages/login.py")
+        else:
+            st.switch_page("pages/chat.py")
 
 with col2:
     if st.button("= View Metrics", use_container_width=True):
