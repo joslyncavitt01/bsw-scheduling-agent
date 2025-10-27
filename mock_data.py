@@ -695,7 +695,7 @@ CLINICAL_PROTOCOLS = [
 ]
 
 
-def generate_appointment_slots(provider: Provider, days_ahead: int = 14) -> List[AppointmentSlot]:
+def generate_appointment_slots(provider: Provider, days_ahead: int = 30) -> List[AppointmentSlot]:
     """Generate available appointment slots for a provider."""
     slots = []
     slot_counter = 1
