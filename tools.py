@@ -98,7 +98,7 @@ def search_appointment_slots(
         start_date: Start date for search range (YYYY-MM-DD format)
         end_date: End date for search range (YYYY-MM-DD format)
         location: Filter by clinic location city (e.g., 'Dallas', 'Plano')
-        appointment_type: Filter by appointment type ('New Patient' or 'Follow-up')
+        appointment_type: Filter by appointment type (e.g., 'New Patient Consultation', 'Post-Operative Follow-up', 'Heart Failure Follow-up'). Supports exact and partial matching.
         max_results: Maximum number of results to return (default 20)
 
     Returns:
@@ -131,10 +131,22 @@ def search_appointment_slots(
             ]
 
         if appointment_type:
-            available_slots = [
+            # Support both exact matching and partial matching
+            # First try exact match, then fall back to partial match
+            appointment_type_lower = appointment_type.lower()
+            exact_match_slots = [
                 s for s in available_slots
-                if s.appointment_type.lower() == appointment_type.lower()
+                if s.appointment_type.lower() == appointment_type_lower
             ]
+
+            if exact_match_slots:
+                available_slots = exact_match_slots
+            else:
+                # Try partial match (e.g., "follow-up" matches "Post-Operative Follow-up")
+                available_slots = [
+                    s for s in available_slots
+                    if appointment_type_lower in s.appointment_type.lower()
+                ]
 
         # Sort by date and time
         available_slots.sort(key=lambda s: (s.date, s.time))
@@ -761,8 +773,7 @@ TOOLS_DEFINITIONS = [
                     },
                     "appointment_type": {
                         "type": "string",
-                        "description": "Optional: Filter by appointment type",
-                        "enum": ["New Patient", "Follow-up"]
+                        "description": "Optional: Filter by specific appointment type. Types are specialty-specific. Examples: 'New Patient Consultation', 'Post-Operative Follow-up', 'Fracture Follow-up', 'Joint Injection', 'Heart Failure Follow-up', 'A-fib Management', 'Annual Wellness Visit', 'Chronic Disease Management'. Use the exact appointment type name the patient requests."
                     },
                     "max_results": {
                         "type": "integer",
