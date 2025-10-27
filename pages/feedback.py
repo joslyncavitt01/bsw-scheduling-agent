@@ -18,7 +18,7 @@ import os
 # Page configuration
 st.set_page_config(
     page_title="Feedback - BSW Scheduling Agent",
-    page_icon="⭐",
+    page_icon="",
     layout="wide"
 )
 
@@ -73,7 +73,7 @@ def generate_sample_responses() -> Dict[str, str]:
 st.markdown("""
 <div style="background: linear-gradient(135deg, #00447c 0%, #00a4e4 100%);
             padding: 2rem; border-radius: 10px; margin-bottom: 2rem;">
-    <h1 style="color: white; margin: 0;">⭐ Feedback & Preference Labeling</h1>
+    <h1 style="color: white; margin: 0;"> Feedback & Preference Labeling</h1>
     <p style="color: rgba(255,255,255,0.9); margin: 0.5rem 0 0 0;">
         Help improve the AI scheduling assistant through human feedback
     </p>
@@ -82,9 +82,9 @@ st.markdown("""
 
 # Create tabs
 tab1, tab2, tab3 = st.tabs([
-    "📊 Response Comparison",
-    "⭐ Rate Conversation",
-    "📈 Feedback Analytics"
+    " Response Comparison",
+    " Rate Conversation",
+    " Feedback Analytics"
 ])
 
 # Tab 1: Response Comparison
@@ -97,7 +97,7 @@ with tab1:
     """)
 
     # Generate or use existing comparison
-    if st.button("🔄 Generate New Comparison", use_container_width=False):
+    if st.button(" Generate New Comparison", use_container_width=False):
         st.session_state.current_comparison = generate_sample_responses()
 
     if st.session_state.current_comparison is None:
@@ -123,7 +123,7 @@ with tab1:
         st.markdown("##### Response A")
         st.markdown(f"""
         <div style="background-color: #f0f8ff; padding: 1.5rem; border-radius: 8px;
-                    border-left: 4px solid #00a4e4; min-height: 200px;">
+                    border-left: 4px solid #00a4e4; min-height: 200px; color: #212529;">
             {comparison['response_a']}
         </div>
         """, unsafe_allow_html=True)
@@ -132,7 +132,7 @@ with tab1:
         st.markdown("##### Response B")
         st.markdown(f"""
         <div style="background-color: #f0fff0; padding: 1.5rem; border-radius: 8px;
-                    border-left: 4px solid #00cc88; min-height: 200px;">
+                    border-left: 4px solid #00cc88; min-height: 200px; color: #212529;">
             {comparison['response_b']}
         </div>
         """, unsafe_allow_html=True)
@@ -145,10 +145,10 @@ with tab1:
     col1, col2, col3, col4 = st.columns([2, 2, 2, 4])
 
     with col1:
-        prefer_a = st.button("👈 Prefer Response A", use_container_width=True)
+        prefer_a = st.button(" Prefer Response A", use_container_width=True)
 
     with col2:
-        prefer_b = st.button("👉 Prefer Response B", use_container_width=True)
+        prefer_b = st.button(" Prefer Response B", use_container_width=True)
 
     with col3:
         prefer_tie = st.button("🤝 Both Equal", use_container_width=True)
@@ -157,7 +157,7 @@ with tab1:
     if prefer_a or prefer_b or prefer_tie:
         preference = "A" if prefer_a else ("B" if prefer_b else "Tie")
 
-        st.success(f"✅ Preference recorded: **{preference}**")
+        st.success(f" Preference recorded: **{preference}**")
 
         # Collect additional feedback
         with st.form("detailed_feedback"):
@@ -198,7 +198,7 @@ with tab1:
 
                 save_feedback(feedback_data)
 
-                st.success("🎉 Thank you! Your feedback has been saved.")
+                st.success(" Thank you! Your feedback has been saved.")
 
                 # Generate new comparison
                 st.session_state.current_comparison = generate_sample_responses()
@@ -289,11 +289,11 @@ with tab2:
 
         st.markdown("---")
 
-        task_completed = st.checkbox("✅ Task was successfully completed")
+        task_completed = st.checkbox(" Task was successfully completed")
 
         overall_sentiment = st.radio(
             "Overall sentiment about this conversation:",
-            ["😊 Very Satisfied", "🙂 Satisfied", "😐 Neutral", "😕 Unsatisfied", "😞 Very Unsatisfied"],
+            [" Very Satisfied", " Satisfied", " Neutral", " Unsatisfied", " Very Unsatisfied"],
             index=1
         )
 
@@ -329,7 +329,7 @@ with tab2:
 
             save_feedback(rating_data)
 
-            st.success("🎉 Thank you! Your rating has been recorded.")
+            st.success(" Thank you! Your rating has been recorded.")
 
 # Tab 3: Feedback Analytics
 with tab3:
@@ -337,7 +337,7 @@ with tab3:
 
     if not st.session_state.feedback_history:
         st.info("""
-        📊 **No feedback data yet**
+         **No feedback data yet**
 
         Provide feedback in the other tabs to see analytics here.
 
@@ -433,7 +433,7 @@ with tab3:
                 st.json(feedback)
 
         # Export button
-        if st.button("📥 Export All Feedback as JSON"):
+        if st.button(" Export All Feedback as JSON"):
             json_str = json.dumps(st.session_state.feedback_history, indent=2)
 
             st.download_button(

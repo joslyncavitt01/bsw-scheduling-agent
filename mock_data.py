@@ -31,9 +31,17 @@ class Patient:
     allergies: List[str]
     medications: List[str]
     recent_visits: List[Dict[str, str]]
-    
+
     def __str__(self):
         return f"{self.first_name} {self.last_name} (ID: {self.patient_id})"
+
+    def has_seen_provider(self, provider_id: str) -> bool:
+        """Check if patient has previously seen this provider."""
+        return any(visit.get("provider") == provider_id for visit in self.recent_visits)
+
+    def is_new_to_bsw(self) -> bool:
+        """Check if patient is new to BSW Health system."""
+        return len(self.recent_visits) == 0
 
 
 @dataclass
@@ -691,35 +699,67 @@ def generate_appointment_slots(provider: Provider, days_ahead: int = 14) -> List
     """Generate available appointment slots for a provider."""
     slots = []
     slot_counter = 1
-    
+
+    # Define specialty-specific appointment types
+    appointment_types_by_specialty = {
+        "Orthopedic Surgery": [
+            "New Patient Consultation",
+            "Post-Operative Follow-up",
+            "Fracture Follow-up",
+            "Joint Injection",
+            "Surgical Consult"
+        ],
+        "Cardiology": [
+            "New Patient Consultation",
+            "Heart Failure Follow-up",
+            "A-fib Management",
+            "Post-Procedure Follow-up",
+            "Annual Cardiology Exam"
+        ],
+        "Primary Care": [
+            "New Patient Physical",
+            "Annual Wellness Visit",
+            "Sick Visit",
+            "Chronic Disease Management",
+            "Follow-up Visit"
+        ]
+    }
+
+    # Get appropriate appointment types for this provider's specialty
+    appointment_types = appointment_types_by_specialty.get(
+        provider.specialty,
+        ["New Patient", "Follow-up"]  # Default fallback
+    )
+
     today = datetime.now()
     for day_offset in range(1, days_ahead + 1):
         date = today + timedelta(days=day_offset)
         day_name = date.strftime("%A")
-        
+
         if day_name not in provider.availability_days:
             continue
-        
+
         # Morning slots: 8:00 AM - 12:00 PM
         # Afternoon slots: 1:00 PM - 5:00 PM
         time_slots = []
-        
+
         # Morning slots
         for hour in range(8, 12):
             for minute in [0, 30] if provider.typical_slot_duration <= 30 else [0]:
                 time_slots.append(f"{hour:02d}:{minute:02d}")
-        
+
         # Afternoon slots
         for hour in range(13, 17):
             for minute in [0, 30] if provider.typical_slot_duration <= 30 else [0]:
                 time_slots.append(f"{hour:02d}:{minute:02d}")
-        
+
         for time_slot in time_slots:
             # Randomly mark some slots as unavailable (simulate realistic booking)
             is_available = random.random() > 0.3  # 70% available
-            
-            appointment_type = "New Patient" if random.random() > 0.6 else "Follow-up"
-            
+
+            # Select appropriate appointment type
+            appointment_type = random.choice(appointment_types)
+
             slot = AppointmentSlot(
                 slot_id=f"SLOT-{provider.provider_id}-{slot_counter:04d}",
                 provider_id=provider.provider_id,
@@ -732,7 +772,7 @@ def generate_appointment_slots(provider: Provider, days_ahead: int = 14) -> List
             )
             slots.append(slot)
             slot_counter += 1
-    
+
     return slots
 
 
@@ -771,6 +811,23 @@ def get_clinical_protocol(condition: str) -> Optional[ClinicalProtocol]:
         if condition.lower() in protocol.condition.lower() or condition.lower() in protocol.name.lower():
             return protocol
     return None
+
+
+def get_patient_status_for_provider(patient: Patient, provider_id: str) -> str:
+    """
+    Determine patient status for a specific provider.
+
+    Returns:
+        - "New to BSW" - Patient has never been to BSW Health
+        - "Established - New to Provider" - Patient has BSW history but not with this provider
+        - "Established with Provider" - Patient has seen this provider before
+    """
+    if patient.is_new_to_bsw():
+        return "New to BSW"
+    elif patient.has_seen_provider(provider_id):
+        return "Established with Provider"
+    else:
+        return "Established - New to Provider"
 
 
 # Generate all appointment slots for all providers

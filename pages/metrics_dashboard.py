@@ -21,7 +21,7 @@ import random
 # Page configuration
 st.set_page_config(
     page_title="Metrics Dashboard - BSW Scheduling Agent",
-    page_icon="📊",
+    page_icon="",
     layout="wide"
 )
 
@@ -151,7 +151,7 @@ def generate_mock_metrics(time_filter: str = "all") -> Dict[str, Any]:
 st.markdown("""
 <div style="background: linear-gradient(135deg, #00447c 0%, #00a4e4 100%);
             padding: 2rem; border-radius: 10px; margin-bottom: 2rem;">
-    <h1 style="color: white; margin: 0;">📊 Metrics Dashboard</h1>
+    <h1 style="color: white; margin: 0;"> Metrics Dashboard</h1>
     <p style="color: rgba(255,255,255,0.9); margin: 0.5rem 0 0 0;">
         Real-time analytics and performance monitoring
     </p>
@@ -187,7 +187,7 @@ elif time_all:
 else:
     time_filter = "24h"  # Default
 
-st.info(f"📅 Showing metrics for: **{time_filter.upper()}**")
+st.info(f" Showing metrics for: **{time_filter.upper()}**")
 
 # Generate metrics
 metrics = generate_mock_metrics(time_filter)
@@ -418,7 +418,7 @@ st.markdown("### Export Data")
 col1, col2, col3 = st.columns([2, 2, 6])
 
 with col1:
-    if st.button("📥 Export JSON", use_container_width=True):
+    if st.button(" Export JSON", use_container_width=True):
         # Create export data
         export_data = {
             "export_timestamp": datetime.now().isoformat(),
@@ -439,7 +439,7 @@ with col1:
         )
 
 with col2:
-    if st.button("📄 Export CSV", use_container_width=True):
+    if st.button(" Export CSV", use_container_width=True):
         # Export agent performance as CSV
         csv_str = df_agents.to_csv(index=False)
 

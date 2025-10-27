@@ -14,7 +14,7 @@ load_dotenv()
 # Page configuration
 st.set_page_config(
     page_title="BSW Health - AI Scheduling Assistant",
-    page_icon="🏥",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
@@ -182,7 +182,7 @@ if not st.session_state.rag_initialized:
 
 # Sidebar
 with st.sidebar:
-    st.image("https://via.placeholder.com/250x80/00447c/ffffff?text=BSW+Health", use_column_width=True)
+    st.image("https://via.placeholder.com/250x80/00447c/ffffff?text=BSW+Health", use_container_width=True)
 
     st.markdown("---")
 
@@ -245,7 +245,7 @@ with st.sidebar:
 # Main content
 st.markdown("""
 <div class="main-header">
-    <h1><� Baylor Scott & White Health</h1>
+    <h1>< Baylor Scott & White Health</h1>
     <p>AI-Powered Appointment Scheduling Assistant</p>
 </div>
 """, unsafe_allow_html=True)
@@ -282,7 +282,8 @@ with col1:
 with col2:
     st.markdown("""
     <div class="feature-item">
-        <div class="feature-icon">=</div>
+        <div class="feature-icon">=
+</div>
         <div class="feature-title">RAG-Enhanced Policies</div>
         <div class="feature-description">
             Real-time retrieval of insurance coverage rules, clinical protocols, and scheduling policies
@@ -294,7 +295,7 @@ with col2:
 with col3:
     st.markdown("""
     <div class="feature-item">
-        <div class="feature-icon">�</div>
+        <div class="feature-icon"></div>
         <div class="feature-title">Smart Function Calling</div>
         <div class="feature-description">
             Advanced AI uses function calling to check provider availability, verify insurance,
@@ -417,11 +418,11 @@ st.markdown("## Ready to Get Started?")
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    if st.button("=� Start Chatting", use_container_width=True):
+    if st.button("= Start Chatting", use_container_width=True):
         st.switch_page("pages/chat.py")
 
 with col2:
-    if st.button("=� View Metrics", use_container_width=True):
+    if st.button("= View Metrics", use_container_width=True):
         st.switch_page("pages/metrics_dashboard.py")
 
 with col3:
@@ -429,7 +430,7 @@ with col3:
         st.switch_page("pages/feedback.py")
 
 with col4:
-    if st.button("=� Test Scenarios", use_container_width=True):
+    if st.button("= Test Scenarios", use_container_width=True):
         st.info("Navigate to Chat page to try demo scenarios")
 
 # Footer

@@ -34,7 +34,7 @@ except ImportError as e:
 # Page configuration
 st.set_page_config(
     page_title="Chat - BSW Scheduling Agent",
-    page_icon="💬",
+    page_icon="",
     layout="wide"
 )
 
@@ -180,7 +180,7 @@ def format_agent_name(agent: str) -> str:
 st.markdown("""
 <div style="background: linear-gradient(135deg, #00447c 0%, #00a4e4 100%);
             padding: 2rem; border-radius: 10px; margin-bottom: 2rem;">
-    <h1 style="color: white; margin: 0;">💬 Chat with AI Scheduling Assistant</h1>
+    <h1 style="color: white; margin: 0;"> Chat with AI Scheduling Assistant</h1>
     <p style="color: rgba(255,255,255,0.9); margin: 0.5rem 0 0 0;">
         Schedule appointments with our intelligent multi-agent system
     </p>
@@ -212,6 +212,8 @@ with st.sidebar:
                 st.markdown(f"""
                 **ID**: {patient.patient_id}
                 **Age**: {patient.age}
+                **Location**: {patient.city}, {patient.state} {patient.zip_code}
+                **Address**: {patient.address}
                 **Insurance**: {patient.insurance_provider}
                 **Conditions**: {', '.join(patient.medical_conditions) if patient.medical_conditions else 'None'}
                 """)
@@ -244,7 +246,7 @@ with st.sidebar:
     # Session controls
     st.markdown("#### Session Controls")
 
-    if st.button("🗑️ Clear Conversation", use_container_width=True):
+    if st.button(" Clear Conversation", use_container_width=True):
         st.session_state.messages = []
         st.session_state.current_agent = "router"
         st.session_state.tools_used = []
@@ -266,7 +268,7 @@ with st.sidebar:
     st.markdown("---")
 
     # Help
-    st.markdown("#### 💡 Demo Scenarios")
+    st.markdown("####  Demo Scenarios")
 
     with st.expander("Orthopedic Follow-up"):
         st.markdown("""
@@ -295,16 +297,16 @@ for message in st.session_state.messages:
     content = message["content"]
 
     if role == "user":
-        with st.chat_message("user", avatar="👤"):
+        with st.chat_message("user", avatar=""):
             st.markdown(content)
 
     elif role == "assistant":
         agent = message.get("agent", "assistant")
         avatar = {
-            "router": "🎯",
+            "router": "",
             "orthopedic": "🦴",
-            "cardiology": "❤️",
-            "primary_care": "🏥"
+            "cardiology": "",
+            "primary_care": ""
         }.get(agent, "🤖")
 
         with st.chat_message("assistant", avatar=avatar):
@@ -312,7 +314,7 @@ for message in st.session_state.messages:
 
             # Show tool usage if any
             if message.get("tools_used"):
-                with st.expander("🔧 Tools Used"):
+                with st.expander(" Tools Used"):
                     for tool in message["tools_used"]:
                         st.code(tool, language="text")
 
@@ -337,7 +339,7 @@ if prompt := st.chat_input("Type your message here..."):
     })
 
     # Display user message
-    with st.chat_message("user", avatar="👤"):
+    with st.chat_message("user", avatar=""):
         st.markdown(prompt)
 
     # Determine routing (if on router agent)
@@ -354,10 +356,10 @@ if prompt := st.chat_input("Type your message here..."):
     # Call appropriate agent
     current_agent = st.session_state.current_agent
     agent_avatar = {
-        "router": "🎯",
+        "router": "",
         "orthopedic": "🦴",
-        "cardiology": "❤️",
-        "primary_care": "🏥"
+        "cardiology": "",
+        "primary_care": ""
     }.get(current_agent, "🤖")
 
     with st.chat_message("assistant", avatar=agent_avatar):
@@ -406,7 +408,7 @@ if prompt := st.chat_input("Type your message here..."):
 
             # Show tools used
             if tools_used_in_turn:
-                with st.expander("🔧 Tools Used"):
+                with st.expander(" Tools Used"):
                     for tool in tools_used_in_turn:
                         st.code(tool, language="text")
 
@@ -422,7 +424,7 @@ if prompt := st.chat_input("Type your message here..."):
 # Empty state
 if not st.session_state.messages:
     st.info("""
-    👋 **Welcome to BSW Health AI Scheduling!**
+     **Welcome to BSW Health AI Scheduling!**
 
     Start a conversation by typing a message below, or select a demo patient from the sidebar
     and try one of the example scenarios.
