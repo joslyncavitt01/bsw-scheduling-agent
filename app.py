@@ -182,7 +182,14 @@ if not st.session_state.rag_initialized:
 
 # Sidebar
 with st.sidebar:
-    st.image("https://via.placeholder.com/250x80/00447c/ffffff?text=BSW+Health", use_container_width=True)
+    # Logo placeholder - using styled text instead of image
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #00447c 0%, #00a4e4 100%);
+                padding: 1.5rem; border-radius: 8px; text-align: center; margin-bottom: 1rem;">
+        <h2 style="color: white; margin: 0; font-size: 1.5rem;">BSW Health</h2>
+        <p style="color: rgba(255,255,255,0.8); margin: 0.25rem 0 0 0; font-size: 0.9rem;">AI Scheduling</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown("---")
 
@@ -282,8 +289,7 @@ with col1:
 with col2:
     st.markdown("""
     <div class="feature-item">
-        <div class="feature-icon">=
-</div>
+        <div class="feature-icon">📚</div>
         <div class="feature-title">RAG-Enhanced Policies</div>
         <div class="feature-description">
             Real-time retrieval of insurance coverage rules, clinical protocols, and scheduling policies
@@ -295,7 +301,7 @@ with col2:
 with col3:
     st.markdown("""
     <div class="feature-item">
-        <div class="feature-icon"></div>
+        <div class="feature-icon">⚡</div>
         <div class="feature-title">Smart Function Calling</div>
         <div class="feature-description">
             Advanced AI uses function calling to check provider availability, verify insurance,
@@ -437,7 +443,8 @@ with col4:
 st.markdown("""
 <div class="footer">
     <p><strong>Baylor Scott & White Health - AI Scheduling Agent Demo</strong></p>
-    <p>Developed for BSW Health Interview | October 2025</p>
+    <p>Developed by <strong>Joslyn Cavitt</strong> | <a href="mailto:joslyncavitt@gmail.com">joslyncavitt@gmail.com</a></p>
+    <p>Created for BSW Health Interview | October 2025</p>
     <p>Tech Stack: Python 3.11 | Streamlit | OpenAI GPT-4o-mini | ChromaDB</p>
     <p style="margin-top: 1rem; font-size: 0.85rem; color: #999;">
         This is a demonstration system using mock data only. No real patient information is stored or processed.
