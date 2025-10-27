@@ -277,7 +277,7 @@ col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown("""
     <div class="feature-item">
-        <div class="feature-icon">></div>
+        <div class="feature-icon"></div>
         <div class="feature-title">Multi-Agent Intelligence</div>
         <div class="feature-description">
             Intelligent routing system directs you to the right specialist agent based on your needs.
