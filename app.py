@@ -289,7 +289,7 @@ with col1:
 with col2:
     st.markdown("""
     <div class="feature-item">
-        <div class="feature-icon">📚</div>
+        <div class="feature-icon"></div>
         <div class="feature-title">RAG-Enhanced Policies</div>
         <div class="feature-description">
             Real-time retrieval of insurance coverage rules, clinical protocols, and scheduling policies
@@ -301,7 +301,7 @@ with col2:
 with col3:
     st.markdown("""
     <div class="feature-item">
-        <div class="feature-icon">⚡</div>
+        <div class="feature-icon"></div>
         <div class="feature-title">Smart Function Calling</div>
         <div class="feature-description">
             Advanced AI uses function calling to check provider availability, verify insurance,
